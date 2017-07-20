@@ -7,5 +7,5 @@ codecov>=2.0.0
 # Additional test requirements go here
 
 
-django
-djangorestframework
+#django
+#djangorestframework
