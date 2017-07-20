@@ -2,8 +2,8 @@ from rest_framework.response import Response
 
 from .serializers import SideLoadableSerializer
 
-class SideloadableRelationsMixin(object):
 
+class SideloadableRelationsMixin(object):
     query_param_name = 'sideload'
 
     relation_names = []
