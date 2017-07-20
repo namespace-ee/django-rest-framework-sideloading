@@ -3,19 +3,17 @@
 language: python
 
 python:
-  - "3.5"
+  - "2.7"
 
-env: 
-  - TOX_ENV=py35-django-18
-  - TOX_ENV=py34-django-18
-  - TOX_ENV=py33-django-18
-  - TOX_ENV=py27-django-18
-  - TOX_ENV=py35-django-19
-  - TOX_ENV=py34-django-19
-  - TOX_ENV=py27-django-19
-  - TOX_ENV=py35-django-110
-  - TOX_ENV=py34-django-110
-  - TOX_ENV=py27-django-110
+env:
+  - TOX_ENV=py27-django-18-drf34
+  - TOX_ENV=py27-django-19-drf34
+  - TOX_ENV=py27-django-110-drf34
+  - TOX_ENV=py27-django-110-drf35
+  - TOX_ENV=py27-django-110-drf36
+  - TOX_ENV=py27-django-111-drf34
+  - TOX_ENV=py27-django-111-drf35
+  - TOX_ENV=py27-django-111-drf36
 
 matrix:
   fast_finish: true
