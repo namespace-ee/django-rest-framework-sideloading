@@ -52,6 +52,11 @@ Features
 --------
 
 * TODO
+* fix documentation
+* improve coverage
+* python3 support
+* manytomany relations support
+
 
 Running Tests
 -------------
