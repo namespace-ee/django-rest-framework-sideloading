@@ -25,28 +25,31 @@ Install drf-sideloading::
 
     pip install drf-sideloading
 
-Add it to your `INSTALLED_APPS`:
+Import Mixin `SideloadableRelationsMixin`:
 
 .. code-block:: python
 
-    INSTALLED_APPS = (
-        ...
-        'drf_sideloading.apps.DrfSideloadingConfig',
-        ...
-    )
+    from drf_sideloading.mixins import SideloadableRelationsMixin
 
-Add drf-sideloading's URL patterns:
+Include mixin in view, define serializers dict `sideloadable_relations` and `base_model_name`
 
 .. code-block:: python
 
-    from drf_sideloading import urls as drf_sideloading_urls
+    class ProductViewSet(SideloadableRelationsMixin, viewsets.ModelViewSet):
+        """
+        A simple ViewSet for viewing and editing products.
+        """
+        queryset = Product.objects.all()
+        serializer_class = ProductSerializer
 
+        base_model_name = 'product'
 
-    urlpatterns = [
-        ...
-        url(r'^', include(drf_sideloading_urls)),
-        ...
-    ]
+        sideloadable_relations = {
+            'product': ProductSerializer,
+            'category': CategorySerializer,
+            'supplier': SupplierSerializer
+        }
+
 
 Features
 --------
