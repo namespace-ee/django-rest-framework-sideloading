@@ -57,6 +57,45 @@ class TestDrfSideloading(TestCase):
         self.assertEqual(2, len(response.data))
         self.assertEqual(set(expected_loads), set(response.data))
 
+    # negative test cases
+    def test_sideloading_supplier_empty(self):
+        response = self.client.get(reverse('product-list'), {'sideload': ''})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+        expected_loads = ['id', 'name', 'category', 'supplier']
+        self.assertEqual(expected_loads, response.data[0].keys())
 
+    def test_sideloading_supplier_unexisting_relation(self):
+        response = self.client.get(reverse('product-list'), {'sideload': 'unexisting'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+        expected_loads = ['id', 'name', 'category', 'supplier']
+        self.assertEqual(expected_loads, response.data[0].keys())
+
+    def test_sideloading_supplier_unexisting_mixed_existing_relation(self):
+        response = self.client.get(reverse('product-list'), {'sideload': 'unexisting,supplier'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        expected_loads = ['supplier', 'product']
+
+        self.assertEqual(2, len(response.data))
+        self.assertEqual(set(expected_loads), set(response.data))
+
+    def test_sideloading_supplier_unexisting_mixed_existing_relation_middle(self):
+        response = self.client.get(reverse('product-list'), {'sideload': 'category,unexisting,supplier'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        expected_loads = ['category', 'supplier', 'product']
+
+        self.assertEqual(3, len(response.data))
+        self.assertEqual(set(expected_loads), set(response.data))
+
+    def test_sideloading_supplier_wrongly_forrmed_quey(self):
+        response = self.client.get(reverse('product-list'),
+                                   {'sideload': ',,@,123,category,123,.unexisting,123,,,,supplier,!@'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        expected_loads = ['category', 'supplier', 'product']
+
+        self.assertEqual(3, len(response.data))
+        self.assertEqual(set(expected_loads), set(response.data))
