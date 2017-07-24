@@ -4,10 +4,10 @@ from drf_sideloading.mixins import SideloadableRelationsMixin
 from tests.models import (
     Product,
     Category,
-    Supplier
-)
+    Supplier,
+    Partner)
 
-from tests.serializers import ProductSerializer, CategorySerializer, SupplierSerializer
+from tests.serializers import ProductSerializer, CategorySerializer, SupplierSerializer, PartnerSerializer
 
 
 class ProductViewSet(SideloadableRelationsMixin, viewsets.ModelViewSet):
@@ -22,7 +22,8 @@ class ProductViewSet(SideloadableRelationsMixin, viewsets.ModelViewSet):
     sideloadable_relations = {
         'product': ProductSerializer,
         'category': CategorySerializer,
-        'supplier': SupplierSerializer
+        'supplier': SupplierSerializer,
+        'partner': PartnerSerializer
     }
 
 
@@ -34,3 +35,10 @@ class CategoryViewSet(viewsets.ModelViewSet):
 class SupplierViewSet(viewsets.ModelViewSet):
     queryset = Supplier.objects.all()
     serializer_class = SupplierSerializer
+
+
+class PartnerViewSet(viewsets.ModelViewSet):
+    queryset = Partner.objects.all()
+    serializer_class = PartnerSerializer
+
+
