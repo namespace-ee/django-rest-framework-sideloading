@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from tests.models import Supplier, Category, Product
+from tests.models import Supplier, Category, Product, Partner
 
 
 class SupplierSerializer(serializers.ModelSerializer):
@@ -11,7 +11,7 @@ class SupplierSerializer(serializers.ModelSerializer):
 
 class PartnerSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Supplier
+        model = Partner
         fields = '__all__'
 
 

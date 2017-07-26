@@ -51,7 +51,10 @@ class SideloadableRelationsMixin(object):
         for rel in self.relation_names:
             single_relation_set = set()
             for row in page:
-                single_relation_set.add(getattr(row, rel))
+                if getattr(row, rel).__class__.__name__ == 'ManyRelatedManager':
+                    single_relation_set = single_relation_set | set(getattr(row, rel).all())
+                else:
+                    single_relation_set.add(getattr(row, rel))
             sideloadable_page[rel] = single_relation_set
         return sideloadable_page
 

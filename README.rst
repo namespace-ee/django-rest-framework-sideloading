@@ -47,8 +47,14 @@ Include mixin in view, define serializers dict `sideloadable_relations` and `bas
         sideloadable_relations = {
             'product': ProductSerializer,
             'category': CategorySerializer,
-            'supplier': SupplierSerializer
+            'supplier': SupplierSerializer,
+            'partner': PartnerSerializer
         }
+
+
+Add extra parameter and define comma separated relations:
+
+`GET` `http://example.com/product/?sideload=category,partner,supplier`
 
 
 Features
@@ -58,7 +64,6 @@ Features
 * fix documentation
 * improve coverage
 * python3 support
-* manytomany relations support
 
 
 Running Tests

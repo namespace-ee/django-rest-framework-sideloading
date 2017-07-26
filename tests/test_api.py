@@ -13,7 +13,7 @@ from django.test import TestCase
 from django.core.urlresolvers import reverse
 from rest_framework import status
 
-from tests.models import Category, Supplier, Product
+from tests.models import Category, Supplier, Product, Partner
 
 
 class TestDrfSideloading(TestCase):
@@ -21,7 +21,13 @@ class TestDrfSideloading(TestCase):
     def setUp(self):
         category = Category.objects.create(name='Category')
         supplier = Supplier.objects.create(name='Supplier')
-        Product.objects.create(name="Product", category=category, supplier=supplier)
+        partner1 = Partner.objects.create(name='Partner1')
+        partner2 = Partner.objects.create(name='Partner2')
+
+        product = Product.objects.create(name="Product", category=category, supplier=supplier)
+        product.partner.add(partner1)
+        product.partner.add(partner2)
+        product.save()
 
     def test_product_list(self):
         response = self.client.get(reverse('product-list'), format='json')
@@ -56,6 +62,17 @@ class TestDrfSideloading(TestCase):
 
         self.assertEqual(2, len(response.data))
         self.assertEqual(set(expected_loads), set(response.data))
+
+    def test_sideloading_partner_product_list(self):
+        response = self.client.get(reverse('product-list'), {'sideload': 'partner'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        expected_loads = ['product', 'partner']
+
+        self.assertEqual(2, len(response.data))
+        self.assertEqual(set(expected_loads), set(response.data))
+
+        self.assertEqual(2, len(response.data['partner']))
 
     # negative test cases
     def test_sideloading_supplier_empty(self):
