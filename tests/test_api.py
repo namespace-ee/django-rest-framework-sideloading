@@ -116,3 +116,15 @@ class TestDrfSideloading(TestCase):
 
         self.assertEqual(3, len(response.data))
         self.assertEqual(set(expected_loads), set(response.data))
+
+    def test_sideloading_partner_product_use_primary_list(self):
+        """using primary model as a sideload relation request should not fail"""
+        response = self.client.get(reverse('product-list'), {'sideload': 'partner,product'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        expected_loads = ['product', 'partner']
+
+        self.assertEqual(2, len(response.data))
+        self.assertEqual(set(expected_loads), set(response.data))
+
+        self.assertEqual(2, len(response.data['partner']))
