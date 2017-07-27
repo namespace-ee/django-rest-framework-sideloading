@@ -43,7 +43,8 @@ class SideloadableRelationsMixin(object):
     def parse_query_param(self, sideload_relations):
         relation_names = sideload_relations.split(',')
         # only take valid names
-        self.relation_names = set(relation_names) & set(self.sideloadable_relations.keys())
+        self.relation_names = (set(relation_names)
+                               & set(self.sideloadable_relations.keys())) - set([self.base_model_name])
         return relation_names
 
     def get_sideloadable_page(self, page):
