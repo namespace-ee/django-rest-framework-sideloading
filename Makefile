@@ -57,3 +57,6 @@ release: clean ## package and upload a release
 sdist: clean ## package
 	python setup.py sdist
 	ls -l dist
+
+bump: ## bump next version + by 0.0.1 patch
+	bumpversion patch
