@@ -4,12 +4,19 @@ drf-sideloading
 
 .. image:: https://badge.fury.io/py/drf-sideloading.svg
     :target: https://badge.fury.io/py/drf-sideloading
+    :alt: Package Index
 
 .. image:: https://travis-ci.org/namespace-ee/drf-sideloading.svg?branch=master
     :target: https://travis-ci.org/namespace-ee/drf-sideloading
+    :alt: Build Status
 
 .. image:: https://codecov.io/gh/namespace-ee/drf-sideloading/branch/master/graph/badge.svg
     :target: https://codecov.io/gh/namespace-ee/drf-sideloading
+    :alt: Code Coverage
+
+.. image:: https://readthedocs.org/projects/drf-sideloading/badge/?version=latest
+    :target: http://drf-sideloading.readthedocs.io/en/latest/?badge=latest
+    :alt: Documentation Status
 
 Extention for Django Rest Framework to enable simple sidloading
 
