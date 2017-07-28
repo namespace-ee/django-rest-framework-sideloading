@@ -10,6 +10,32 @@ class SideloadableRelationsMixin(object):
     base_model_name = ''
     relations_set = {}
 
+
+    {
+        'relation_name': 'display_name'
+    }
+
+    def __init__(self, **kwargs):
+        self.primary_serializer_class = self.get_serializer_class()
+
+    #     Todo sideload relations analyze
+
+        if not self.sideloadable_relations:
+            raise Exception
+        # find primary model and serializer
+        # get_primary_relation
+        #
+        self.sideloadable_relations
+
+
+
+
+    def init(self, sideload):
+        if not sideload:
+            return False
+
+        self.parse_query_param(sideload)
+
     def list(self, request, *args, **kwargs):
         sideload = request.query_params.get(self.get_param_name(), None)
         if not sideload:
