@@ -46,15 +46,12 @@ Import Mixin `SideloadableRelationsMixin`:
 
     from drf_sideloading.mixins import SideloadableRelationsMixin
 
-::
 
-    Include mixin in view, define serializers dict `sideloadable_relations` and `base_model_name`
+Include mixin in view, define serializers dict `sideloadable_relations` and `base_model_name`
 
-::
-
-    Defining primary relationship is optional if defined defaults will be overrided
-    In below case we define primary relationship along with side ones.
-    By adding `'product': {'primary':True},` in `sideloadable_relations` dict we
+Defining primary relationship is optional if defined defaults will be overrided
+In below case we define primary relationship along with side ones.
+By adding `'product': {'primary':True},` in `sideloadable_relations` dict we
 
 .. code-block:: python
 
@@ -72,13 +69,56 @@ Import Mixin `SideloadableRelationsMixin`:
             'partner': PartnerSerializer
         }
 
-.. line-block::
-
-    Add extra parameter and define comma separated relations:
-
-    `GET` `http://example.com/product/?sideload=category,partner,supplier`
 
 
+Add extra parameter and define comma separated relations:
+
+``GET /product/?sideload=category,partner,supplier``
+
+
+.. sourcecode:: json
+
+    {
+        "partner": [
+            {
+                "id": 1,
+                ...
+            },
+            {
+                "id": 2,
+                ...
+            },
+            {
+                "id": 3,
+                ...
+            }
+        ],
+        "categories": [
+            {
+                "id": 1,
+                ...
+            }
+        ],
+        "suppliers": [
+            {
+                "id": 1,
+                ...
+            }
+        ],
+        "products": [
+            {
+                "id": 1,
+                "name": "Product 1",
+                "category": 1,
+                "supplier": 1,
+                "partner": [
+                    1,
+                    2,
+                    3
+                ]
+            }
+        ]
+    }
 
 
 .. code-block:: python
