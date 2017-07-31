@@ -8,8 +8,6 @@ class SideloadableRelationsMixin(object):
     default_primary_object_name = 'self'
 
     relation_names = []
-    base_model_name = ''
-    relations_set = {}
 
     def __init__(self, **kwargs):
         self.primary_serializer_class = self.get_serializer_class()
