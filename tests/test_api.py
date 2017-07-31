@@ -129,9 +129,9 @@ class TestDrfSideloadingPrimary(BaseTestCase, SideloadRelatedTestMixin, GeneralT
     """Define only primary True property for primary model"""
 
     @classmethod
-    @unittest.skip("testing skipping")
     def setUpClass(cls):
         super(TestDrfSideloadingPrimary, cls).setUpClass()
+        cls.save_sideloadable_relations = ProductViewSet.sideloadable_relations
         sideloadable_relations = {
             'product': {'primary': True},
             'category': CategorySerializer,

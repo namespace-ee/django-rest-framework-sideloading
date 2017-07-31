@@ -40,6 +40,10 @@ Import Mixin `SideloadableRelationsMixin`:
 
 Include mixin in view, define serializers dict `sideloadable_relations` and `base_model_name`
 
+Defining primary relationship is optional if defined defaults will be overrided
+In below case we define primary relationship along with side ones.
+By adding `'product': {'primary':True},` in `sideloadable_relations` dict we
+
 .. code-block:: python
 
     class ProductViewSet(SideloadableRelationsMixin, viewsets.ModelViewSet):
@@ -50,22 +54,46 @@ Include mixin in view, define serializers dict `sideloadable_relations` and `bas
         serializer_class = ProductSerializer
 
         sideloadable_relations = {
-            'product': {'primary':True, 'serializer': ProductSerializer},
+            'product': {'primary':True},
             'category': CategorySerializer,
             'supplier': SupplierSerializer,
             'partner': PartnerSerializer
         }
 
+.. line-block::
 
-Add extra parameter and define comma separated relations:
+    Add extra parameter and define comma separated relations:
 
-`GET` `http://example.com/product/?sideload=category,partner,supplier`
+    `GET` `http://example.com/product/?sideload=category,partner,supplier`
+
+
+
+
+.. code-block:: python
+
+    sideloadable_relations = {
+        'product': {'primary': True, 'serializer': ProductSerializer},
+        'category': CategorySerializer,
+        'supplier': SupplierSerializer,
+        'partner': PartnerSerializer
+    }
+
+
 
 
 Features
 --------
 
-* TODO
+`sideloadable_relations` dict values supports following types
+    *  `serializers.Serializer` or subclass
+    * `dictionary` with following keys
+        * `primary` - to indicate primary model
+        * `serializer` - serializer class
+        * `name` - to override name of the sideloaded relation
+
+
+TODO
+
 * fix documentation
 * improve coverage
 * python3 support
