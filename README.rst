@@ -18,6 +18,14 @@ drf-sideloading
     :target: http://drf-sideloading.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status
 
+.. image:: https://img.shields.io/pypi/dm/drf-sideloading.svg?maxAge=3600
+    :alt: PyPI Downloads
+    :target: https://pypi.python.org/pypi/drf-sideloading
+
+.. image:: https://img.shields.io/github/license/mashape/apistatus.svg?maxAge=2592000
+    :alt: License is MIT
+    :target: https://github.com/namespace-ee/drf-sideloading/blob/master/LICENSE
+
 Extention for Django Rest Framework to enable simple sidloading
 
 Documentation
@@ -38,7 +46,12 @@ Import Mixin `SideloadableRelationsMixin`:
 
     from drf_sideloading.mixins import SideloadableRelationsMixin
 
+
 Include mixin in view, define serializers dict `sideloadable_relations` and `base_model_name`
+
+Defining primary relationship is optional if defined defaults will be overrided
+In below case we define primary relationship along with side ones.
+By adding `'product': {'primary':True},` in `sideloadable_relations` dict we
 
 .. code-block:: python
 
@@ -49,25 +62,92 @@ Include mixin in view, define serializers dict `sideloadable_relations` and `bas
         queryset = Product.objects.all()
         serializer_class = ProductSerializer
 
-        base_model_name = 'product'
-
         sideloadable_relations = {
-            'product': ProductSerializer,
+            'product': {'primary':True},
             'category': CategorySerializer,
             'supplier': SupplierSerializer,
             'partner': PartnerSerializer
         }
 
 
+
 Add extra parameter and define comma separated relations:
 
-`GET` `http://example.com/product/?sideload=category,partner,supplier`
+``GET /product/?sideload=category,partner,supplier``
+
+
+.. sourcecode:: json
+
+    {
+        "partner": [
+            {
+                "id": 1,
+                ...
+            },
+            {
+                "id": 2,
+                ...
+            },
+            {
+                "id": 3,
+                ...
+            }
+        ],
+        "categories": [
+            {
+                "id": 1,
+                ...
+            }
+        ],
+        "suppliers": [
+            {
+                "id": 1,
+                ...
+            }
+        ],
+        "products": [
+            {
+                "id": 1,
+                "name": "Product 1",
+                "category": 1,
+                "supplier": 1,
+                "partner": [
+                    1,
+                    2,
+                    3
+                ]
+            }
+        ]
+    }
+
+
+Another use case
+
+.. code-block:: python
+
+    sideloadable_relations = {
+        'product': {'primary': True, 'serializer': ProductSerializer, 'name': 'products'},
+        'category': {'serializer': CategorySerializer, 'name': 'categories'},
+        'supplier': SupplierSerializer,
+        'partner': PartnerSerializer
+    }
+
+
 
 
 Features
 --------
 
-* TODO
+`sideloadable_relations` dict values supports following types
+    *  `serializers.Serializer` or subclass
+    * `dictionary` with following keys
+        * `primary` - to indicate primary model
+        * `serializer` - serializer class
+        * `name` - to override name of the sideloaded relation
+
+
+TODO
+
 * fix documentation
 * improve coverage
 * python3 support

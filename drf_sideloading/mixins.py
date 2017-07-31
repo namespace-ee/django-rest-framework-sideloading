@@ -5,10 +5,27 @@ from .serializers import SideLoadableSerializer
 
 class SideloadableRelationsMixin(object):
     query_param_name = 'sideload'
+    default_primary_object_name = 'self'
 
     relation_names = []
-    base_model_name = ''
-    relations_set = {}
+
+    def __init__(self, **kwargs):
+        self.primary_serializer_class = self.get_serializer_class()
+
+        if not self.sideloadable_relations:
+            raise Exception
+        self.primary_object_name = self.get_primary_relation_name()
+
+    def get_primary_relation_name(self):
+        for relation_name, properties in self.sideloadable_relations.iteritems():
+            if isinstance(properties, dict):
+                for name, value in properties.iteritems():
+                    if name == 'primary' and value:
+                        if not properties.get('serializer'):
+                            self.sideloadable_relations[relation_name]['serializer'] = self.primary_serializer_class
+                        return relation_name
+        self.sideloadable_relations[self.default_primary_object_name] = self.primary_serializer_class
+        return self.default_primary_object_name
 
     def list(self, request, *args, **kwargs):
         sideload = request.query_params.get(self.get_param_name(), None)
@@ -41,21 +58,30 @@ class SideloadableRelationsMixin(object):
         return self.query_param_name
 
     def parse_query_param(self, sideload_relations):
+        """ Parse query param and take validated names
+
+        :param sideload_relations string
+        :return valid relation names list
+
+        comma separated relation names may contain invalid or unusable characters.
+        This function finds string match between requested names and defined relation in view
+
+        """
         relation_names = sideload_relations.split(',')
-        # only take valid names
-        self.relation_names = (set(relation_names)
-                               & set(self.sideloadable_relations.keys())) - set([self.base_model_name])
+        self.relation_names = \
+            (set(relation_names) & set(self.sideloadable_relations.keys())) - set([self.primary_object_name])
         return relation_names
 
     def get_sideloadable_page(self, page):
-        sideloadable_page = {self.base_model_name: page}
+        sideloadable_page = {self.primary_object_name: page}
         for rel in self.relation_names:
             single_relation_set = set()
             for row in page:
-                if getattr(row, rel).__class__.__name__ == 'ManyRelatedManager':
-                    single_relation_set = single_relation_set | set(getattr(row, rel).all())
-                else:
-                    single_relation_set.add(getattr(row, rel))
+                if hasattr(row, rel):
+                    if getattr(row, rel).__class__.__name__ == 'ManyRelatedManager':
+                        single_relation_set = single_relation_set | set(getattr(row, rel).all())
+                    else:
+                        single_relation_set.add(getattr(row, rel))
             sideloadable_page[rel] = single_relation_set
         return sideloadable_page
 
