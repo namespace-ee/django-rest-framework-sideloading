@@ -7,6 +7,8 @@ test_drf-sideloading
 
 Tests for `drf-sideloading` models api.
 """
+import unittest
+
 from django.core.urlresolvers import reverse
 from django.test import TestCase
 from rest_framework import status
@@ -17,7 +19,6 @@ from tests.viewsets import ProductViewSet
 
 
 class BaseTestCase(TestCase):
-
     @classmethod
     def setUpClass(cls):
         super(BaseTestCase, cls).setUpClass()
@@ -53,7 +54,7 @@ class SideloadRelatedTestMixin(object):
         response = self.client.get(reverse('product-list'), {'sideload': 'category,supplier'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        expected_loads = ['category', 'supplier'] + [self.primary_model_name]
+        expected_loads = [self.category_relation_name, 'supplier'] + [self.primary_model_name]
 
         self.assertEqual(3, len(response.data))
         self.assertEqual(set(expected_loads), set(response.data))
@@ -62,7 +63,7 @@ class SideloadRelatedTestMixin(object):
         response = self.client.get(reverse('product-list'), {'sideload': 'category'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        expected_loads = ['category'] + [self.primary_model_name]
+        expected_loads = [self.category_relation_name, self.primary_model_name]
 
         self.assertEqual(2, len(response.data))
         self.assertEqual(set(expected_loads), set(response.data))
@@ -102,25 +103,7 @@ class TestDrfSideloadingSimpleAPi(BaseTestCase, SideloadRelatedTestMixin, Genera
 
         # used for assertion
         cls.primary_model_name = 'self'
-
-
-class TestDrfSideloadingNegative(BaseTestCase, SideloadRelatedTestMixin, GeneralTestMixin):
-    """ Test Cases of incorrect use of API """
-
-    @classmethod
-    def setUpClass(cls):
-        super(TestDrfSideloadingNegative, cls).setUpClass()
-        # Define just serializer without indicate primary model
-        sideloadable_relations = {
-            'product': ProductSerializer,
-            'category': CategorySerializer,
-            'supplier': SupplierSerializer,
-            'partner': PartnerSerializer
-        }
-        ProductViewSet.sideloadable_relations = sideloadable_relations
-
-        # used for assertion
-        cls.primary_model_name = 'self'
+        cls.category_relation_name = 'category'
 
 
 class TestDrfSideloadingPrimary(BaseTestCase, SideloadRelatedTestMixin, GeneralTestMixin):
@@ -129,7 +112,10 @@ class TestDrfSideloadingPrimary(BaseTestCase, SideloadRelatedTestMixin, GeneralT
     @classmethod
     def setUpClass(cls):
         super(TestDrfSideloadingPrimary, cls).setUpClass()
-        cls.save_sideloadable_relations = ProductViewSet.sideloadable_relations
+
+        cls.primary_model_name = 'product'
+        cls.category_relation_name = 'category'
+
         sideloadable_relations = {
             'product': {'primary': True},
             'category': CategorySerializer,
@@ -138,7 +124,22 @@ class TestDrfSideloadingPrimary(BaseTestCase, SideloadRelatedTestMixin, GeneralT
         }
         ProductViewSet.sideloadable_relations = sideloadable_relations
 
+
+class TestDrfSideloadingNamed(BaseTestCase, SideloadRelatedTestMixin, GeneralTestMixin):
+    @classmethod
+    def setUpClass(cls):
+        super(TestDrfSideloadingNamed, cls).setUpClass()
+
         cls.primary_model_name = 'product'
+        cls.category_relation_name = 'categories'
+
+        sideloadable_relations = {
+            'product': {'primary': True},
+            'category': {'serializer': CategorySerializer, 'name': cls.category_relation_name},
+            'supplier': SupplierSerializer,
+            'partner': PartnerSerializer
+        }
+        ProductViewSet.sideloadable_relations = sideloadable_relations
 
 
 class TestDrfSideloading(BaseTestCase, SideloadRelatedTestMixin, GeneralTestMixin):
@@ -154,6 +155,7 @@ class TestDrfSideloading(BaseTestCase, SideloadRelatedTestMixin, GeneralTestMixi
         ProductViewSet.sideloadable_relations = sideloadable_relations
 
         cls.primary_model_name = 'product'
+        cls.category_relation_name = 'category'
 
     # negative test cases
     def test_sideloading_supplier_empty(self):
@@ -209,3 +211,36 @@ class TestDrfSideloading(BaseTestCase, SideloadRelatedTestMixin, GeneralTestMixi
         self.assertEqual(set(expected_loads), set(response.data))
 
         self.assertEqual(2, len(response.data['partner']))
+
+
+# incorrect use of API
+class TestDrfSideloadingNegative(BaseTestCase, SideloadRelatedTestMixin, GeneralTestMixin):
+    """ Test Cases of incorrect use of API """
+
+    @classmethod
+    @unittest.skip('Pending tests')
+    def setUpClass(cls):
+        super(TestDrfSideloadingNegative, cls).setUpClass()
+        # Define just serializer without indicate primary model in dict
+        sideloadable_relations = {
+            'product': ProductSerializer,
+            'category': CategorySerializer,
+            'supplier': SupplierSerializer,
+            'partner': PartnerSerializer
+        }
+        ProductViewSet.sideloadable_relations = sideloadable_relations
+
+        # used for assertion
+        cls.primary_model_name = 'self'
+
+
+class TestDrfSideloadingNoRelation(BaseTestCase, SideloadRelatedTestMixin, GeneralTestMixin):
+    """ Test Cases of incorrect use of API """
+
+    @classmethod
+    @unittest.skip('Pending tests')
+    def setUpClass(cls):
+        super(TestDrfSideloadingNoRelation, cls).setUpClass()
+        # Not define sideloadable_relations at all
+        sideloadable_relations = None
+        ProductViewSet.sideloadable_relations = sideloadable_relations

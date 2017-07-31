@@ -18,6 +18,14 @@ drf-sideloading
     :target: http://drf-sideloading.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status
 
+.. image:: https://img.shields.io/pypi/dm/drf-sideloading.svg?maxAge=3600
+    :alt: PyPI Downloads
+    :target: https://pypi.python.org/pypi/drf-sideloading
+
+.. image:: https://img.shields.io/github/license/mashape/apistatus.svg?maxAge=2592000
+    :alt: License is MIT
+    :target: https://github.com/namespace-ee/drf-sideloading/blob/master/LICENSE
+
 Extention for Django Rest Framework to enable simple sidloading
 
 Documentation
@@ -38,11 +46,15 @@ Import Mixin `SideloadableRelationsMixin`:
 
     from drf_sideloading.mixins import SideloadableRelationsMixin
 
-Include mixin in view, define serializers dict `sideloadable_relations` and `base_model_name`
+::
 
-Defining primary relationship is optional if defined defaults will be overrided
-In below case we define primary relationship along with side ones.
-By adding `'product': {'primary':True},` in `sideloadable_relations` dict we
+    Include mixin in view, define serializers dict `sideloadable_relations` and `base_model_name`
+
+::
+
+    Defining primary relationship is optional if defined defaults will be overrided
+    In below case we define primary relationship along with side ones.
+    By adding `'product': {'primary':True},` in `sideloadable_relations` dict we
 
 .. code-block:: python
 
