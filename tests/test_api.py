@@ -7,8 +7,6 @@ test_drf-sideloading
 
 Tests for `drf-sideloading` models api.
 """
-import unittest
-
 from django.core.urlresolvers import reverse
 from django.test import TestCase
 from rest_framework import status
