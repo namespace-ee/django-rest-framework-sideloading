@@ -10,5 +10,9 @@ class SideLoadableSerializer(serializers.Serializer):
         self.many = True
 
         for relation_name in args[0].keys():
-            self.fields[relation_name] = kwargs['context']['view'].sideloadable_relations[relation_name](many=True,
-                                                                                                         read_only=True)
+            relation_property = kwargs['context']['view'].sideloadable_relations[relation_name]
+            if isinstance(relation_property, dict):
+                serializer_class = relation_property['serializer']
+            else:
+                serializer_class = relation_property
+            self.fields[relation_name] = serializer_class(many=True, read_only=True)
