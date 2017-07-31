@@ -7,6 +7,7 @@ test_drf-sideloading
 
 Tests for `drf-sideloading` models api.
 """
+import unittest
 
 from django.core.urlresolvers import reverse
 from django.test import TestCase
@@ -103,6 +104,43 @@ class TestDrfSideloadingSimpleAPi(BaseTestCase, SideloadRelatedTestMixin, Genera
 
         # used for assertion
         cls.primary_model_name = 'self'
+
+
+class TestDrfSideloadingNegative(BaseTestCase, SideloadRelatedTestMixin, GeneralTestMixin):
+    """ Test Cases of incorrect use of API """
+
+    @classmethod
+    def setUpClass(cls):
+        super(TestDrfSideloadingNegative, cls).setUpClass()
+        # Define just serializer without indicate primary model
+        sideloadable_relations = {
+            'product': ProductSerializer,
+            'category': CategorySerializer,
+            'supplier': SupplierSerializer,
+            'partner': PartnerSerializer
+        }
+        ProductViewSet.sideloadable_relations = sideloadable_relations
+
+        # used for assertion
+        cls.primary_model_name = 'self'
+
+
+class TestDrfSideloadingPrimary(BaseTestCase, SideloadRelatedTestMixin, GeneralTestMixin):
+    """Define only primary True property for primary model"""
+
+    @classmethod
+    @unittest.skip("testing skipping")
+    def setUpClass(cls):
+        super(TestDrfSideloadingPrimary, cls).setUpClass()
+        sideloadable_relations = {
+            'product': {'primary': True},
+            'category': CategorySerializer,
+            'supplier': SupplierSerializer,
+            'partner': PartnerSerializer
+        }
+        ProductViewSet.sideloadable_relations = sideloadable_relations
+
+        cls.primary_model_name = 'product'
 
 
 class TestDrfSideloading(BaseTestCase, SideloadRelatedTestMixin, GeneralTestMixin):

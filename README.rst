@@ -49,10 +49,8 @@ Include mixin in view, define serializers dict `sideloadable_relations` and `bas
         queryset = Product.objects.all()
         serializer_class = ProductSerializer
 
-        base_model_name = 'product'
-
         sideloadable_relations = {
-            'product': ProductSerializer,
+            'product': {'primary':True, 'serializer': ProductSerializer},
             'category': CategorySerializer,
             'supplier': SupplierSerializer,
             'partner': PartnerSerializer
