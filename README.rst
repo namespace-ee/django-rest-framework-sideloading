@@ -121,6 +121,8 @@ Add extra parameter and define comma separated relations:
     }
 
 
+Another use case
+
 .. code-block:: python
 
     sideloadable_relations = {
