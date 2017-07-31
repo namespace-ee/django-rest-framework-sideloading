@@ -84,8 +84,8 @@ Import Mixin `SideloadableRelationsMixin`:
 .. code-block:: python
 
     sideloadable_relations = {
-        'product': {'primary': True, 'serializer': ProductSerializer},
-        'category': CategorySerializer,
+        'product': {'primary': True, 'serializer': ProductSerializer, 'name': 'products'},
+        'category': {'serializer': CategorySerializer, 'name': 'categories'},
         'supplier': SupplierSerializer,
         'partner': PartnerSerializer
     }
