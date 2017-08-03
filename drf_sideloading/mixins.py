@@ -17,9 +17,9 @@ class SideloadableRelationsMixin(object):
         self.primary_object_name = self.get_primary_relation_name()
 
     def get_primary_relation_name(self):
-        for relation_name, properties in self.sideloadable_relations.iteritems():
+        for relation_name, properties in self.sideloadable_relations.items():
             if isinstance(properties, dict):
-                for name, value in properties.iteritems():
+                for name, value in properties.items():
                     if name == 'primary' and value:
                         if not properties.get('serializer'):
                             self.sideloadable_relations[relation_name]['serializer'] = self.primary_serializer_class
