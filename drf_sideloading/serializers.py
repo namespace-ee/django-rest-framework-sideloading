@@ -18,9 +18,9 @@ class SideLoadableSerializer(serializers.Serializer):
             self.fields[relation_name] = serializer_class(many=True, read_only=True)
 
     def to_representation(self, obj):
-        representation = super(SideLoadableSerializer, self).to_representation(obj)
+        repr = super(SideLoadableSerializer, self).to_representation(obj)
         for relation_name, properties in self.context['view'].sideloadable_relations.items():
             if isinstance(properties, dict) and relation_name in repr and properties.get('name'):
-                representation[properties['name']] = representation[relation_name]
+                repr[properties['name']] = repr[relation_name]
                 del repr[relation_name]
-        return representation
+        return repr
