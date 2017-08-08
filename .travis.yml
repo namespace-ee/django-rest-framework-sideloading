@@ -22,7 +22,8 @@ python:
 matrix:
   include:
     - python: 3.6
-      env: TOX_ENV=py36-django111-drf34
+      - env: TOX_ENV=py36-django111-drf34
+      - env: TOX_ENV=py36-django111-drf35
     - python: 2.7
       env: TOX_ENV=py27-django18-drf34
   fast_finish: true
