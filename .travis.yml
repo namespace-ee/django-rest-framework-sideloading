@@ -6,29 +6,6 @@ python:
   - "2.7"
   - "3.6"
 
-# env:
-#   - TOX_ENV=py27-django18-drf34
-#   - TOX_ENV=py27-django19-drf34
-#   - TOX_ENV=py27-django110-drf34
-#   - TOX_ENV=py27-django110-drf35
-#   - TOX_ENV=py27-django110-drf36
-#   - TOX_ENV=py27-django111-drf34
-#   - TOX_ENV=py27-django111-drf35
-#   - TOX_ENV=py27-django111-drf36
-#   - TOX_ENV=py36-django111-drf34
-#   - TOX_ENV=py36-django111-drf35
-#   - TOX_ENV=py36-django111-drf36
-
-# matrix:
-#   include:
-#     - python: 3.6
-#       env: TOX_ENV=py36-django111-drf34
-#     - python: 3.6
-#       env: TOX_ENV=py36-django111-drf35
-#     - python: 2.7
-#       env: TOX_ENV=py27-django18-drf34
-#   fast_finish: true
-
 # command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
 install:
   - pip install -r requirements_test.txt
