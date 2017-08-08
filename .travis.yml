@@ -22,12 +22,9 @@ python:
 matrix:
   include:
     - python: 3.6
-      - env: TOXENV=py36-django111-drf34
-      - env: TOXENV=py36-django111-drf35
-      - env: TOXENV=py36-django111-drf36
+      env: TOXENV=py36-django111-drf34
     - python: 2.7
-      - env: TOXENV=py27-django18-drf34
-      - env: TOXENV=py27-django19-drf34
+      env: TOXENV=py27-django18-drf34      
   fast_finish: true
 
 # command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
