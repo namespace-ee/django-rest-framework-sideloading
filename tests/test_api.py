@@ -89,23 +89,6 @@ class SideloadRelatedTestMixin(object):
         self.assertEqual(2, len(response.data['partner']))
 
 
-class TestDrfSideloadingSimpleAPi(BaseTestCase, SideloadRelatedTestMixin, GeneralTestMixin):
-    @classmethod
-    def setUpClass(cls):
-        super(TestDrfSideloadingSimpleAPi, cls).setUpClass()
-        # Define just serializer without indicate primary model
-        sideloadable_relations = {
-            'category': CategorySerializer,
-            'supplier': SupplierSerializer,
-            'partner': PartnerSerializer
-        }
-        ProductViewSet.sideloadable_relations = sideloadable_relations
-
-        # used for assertion
-        cls.primary_model_name = 'self'
-        cls.category_relation_name = 'category'
-
-
 class TestDrfSideloadingPrimary(BaseTestCase, SideloadRelatedTestMixin, GeneralTestMixin):
     """Define only primary True property for primary model"""
 
@@ -117,7 +100,7 @@ class TestDrfSideloadingPrimary(BaseTestCase, SideloadRelatedTestMixin, GeneralT
         cls.category_relation_name = 'category'
 
         sideloadable_relations = {
-            'product': {'primary': True},
+            'product': {'primary': True, 'serializer': ProductSerializer},
             'category': CategorySerializer,
             'supplier': SupplierSerializer,
             'partner': PartnerSerializer
@@ -134,7 +117,7 @@ class TestDrfSideloadingNamed(BaseTestCase, SideloadRelatedTestMixin, GeneralTes
         cls.category_relation_name = 'categories'
 
         sideloadable_relations = {
-            'product': {'primary': True},
+            'product': {'primary': True, 'serializer': ProductSerializer},
             'category': {'serializer': CategorySerializer, 'name': cls.category_relation_name},
             'supplier': SupplierSerializer,
             'partner': PartnerSerializer
