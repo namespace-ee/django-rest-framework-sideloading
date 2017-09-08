@@ -10,11 +10,8 @@ class SideloadableRelationsMixin(object):
     relation_names = []
 
     def __init__(self, **kwargs):
-        # self.primary_serializer_class = self.get_serializer_class()
-
-        if not self.sideloadable_relations:
-            raise Exception(" define `sideloadable_relations` class variable, "
-                            " if you want to use  `SideloadableRelationsMixin` ")
+        if not hasattr(self, 'sideloadable_relations'):
+            raise Exception("define `sideloadable_relations` class variable, while using `SideloadableRelationsMixin`")
         self.primary_object_name = self.get_primary_relation_name()
 
     def get_primary_relation_name(self):
