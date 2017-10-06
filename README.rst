@@ -6,12 +6,12 @@ drf-sideloading
     :target: https://badge.fury.io/py/drf-sideloading
     :alt: Package Index
 
-.. image:: https://travis-ci.org/namespace-ee/drf-sideloading.svg?branch=master
-    :target: https://travis-ci.org/namespace-ee/drf-sideloading
+.. image:: https://travis-ci.org/namespace-ee/django-rest-framework-sideloading.svg?branch=master
+    :target: https://travis-ci.org/namespace-ee/django-rest-framework-sideloading
     :alt: Build Status
 
 .. image:: https://codecov.io/gh/namespace-ee/drf-sideloading/branch/master/graph/badge.svg
-    :target: https://codecov.io/gh/namespace-ee/drf-sideloading
+    :target: https://codecov.io/gh/namespace-ee/django-rest-framework-sideloading
     :alt: Code Coverage
 
 .. image:: https://readthedocs.org/projects/drf-sideloading/badge/?version=latest
@@ -47,12 +47,11 @@ Import Mixin `SideloadableRelationsMixin`:
     from drf_sideloading.mixins import SideloadableRelationsMixin
 
 
-Include mixin in view and define serializers dict `sideloadable_relations` as shown in examples
+Include mixin in view and define serializers dict ``sideloadable_relations`` as shown in examples
 
-Defining primary relationship and indicating that it primary is required.
+It is ``required`` to define and indicate primary relationship in ``sideloadable_relations`` dict
 
-In below example we define primary relationship along with side ones.
-By adding `'product': {'primary':True, 'serializer': ProductSerializer},` in `sideloadable_relations` dict we
+Common Example of using library in ViewSet
 
 .. code-block:: python
 
@@ -65,23 +64,28 @@ By adding `'product': {'primary':True, 'serializer': ProductSerializer},` in `si
 
         sideloadable_relations = {
             'product': {'primary':True, 'serializer': ProductSerializer},
-            'category': CategorySerializer,
+            'category': {'serializer': CategorySerializer, 'name': 'categories'},
             'supplier': SupplierSerializer,
             'partner': PartnerSerializer
         }
 
 
 
-To sideloaded relations add extra parameter and define comma separated relations in any order
+To test it out send ``GET`` request:
 
 ``GET /product/?sideload=category,partner,supplier``
 
-note: if invalid or unexisting relations are used it will be ignored and only valid relations will be loaded
-
+Response looks like:
 
 .. sourcecode:: json
 
     {
+        "category": [
+            {
+                "id": 1,
+                ...
+            }
+        ],
         "partner": [
             {
                 "id": 1,
@@ -96,19 +100,7 @@ note: if invalid or unexisting relations are used it will be ignored and only va
                 ...
             }
         ],
-        "categories": [
-            {
-                "id": 1,
-                ...
-            }
-        ],
-        "suppliers": [
-            {
-                "id": 1,
-                ...
-            }
-        ],
-        "products": [
+        "product": [
             {
                 "id": 1,
                 "name": "Product 1",
@@ -120,34 +112,29 @@ note: if invalid or unexisting relations are used it will be ignored and only va
                     3
                 ]
             }
+        ],
+        "supplier": [
+            {
+                "id": 1,
+                ...
+            }
         ]
     }
-
-
-Another use case where you can change name of the loaded relation key
-
-.. code-block:: python
-
-    sideloadable_relations = {
-        'product': {'primary': True, 'serializer': ProductSerializer, 'name': 'products'},
-        'category': {'serializer': CategorySerializer, 'name': 'categories'},
-        'supplier': SupplierSerializer,
-        'partner': PartnerSerializer
-    }
-
 
 
 
 Features
 --------
 
-`sideloadable_relations` dict values supports following types
-    *  `serializers.Serializer` or subclass
-    * `dictionary` with following keys
-        * `primary` - to indicate primary model
-        * `serializer` - serializer class
-        * `name` - to override name of the sideloaded relation
+``sideloadable_relations`` dict values supports following types
+    * ``serializers.Serializer`` or subclass
+    * ``dictionary`` with following keys
+        * ``primary`` - indicates primary model
+        * ``serializer`` - serializer class
+        * ``name`` - override name of the sideloaded relation
 
+
+note: invalid or unexisting relation names will be ignored and only valid relation name matches will be used
 
 TODO
 
