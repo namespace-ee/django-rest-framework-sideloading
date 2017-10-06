@@ -16,9 +16,9 @@ class SideloadableRelationsMixin(object):
 
     def get_primary_relation_name(self):
         """Determine name of the base(primary) relation"""
-        for relation_name, properties in self.sideloadable_relations.iteritems():
+        for relation_name, properties in self.sideloadable_relations.items():
             if isinstance(properties, dict):
-                for name, value in properties.iteritems():
+                for name, value in properties.items():
                     if name == 'primary' and value:
                         if not properties.get('serializer'):
                             raise Exception("if {} relation is primary then, it is required to  "

@@ -135,14 +135,14 @@ class TestDrfSideloading(BaseTestCase, SideloadRelatedTestMixin, GeneralTestMixi
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         expected_loads = ['id', 'name', 'category', 'supplier', 'partner']
-        self.assertEqual(expected_loads, response.data[0].keys())
+        self.assertEqual(expected_loads, list(response.data[0].keys()))
 
     def test_sideloading_supplier_unexisting_relation(self):
         response = self.client.get(reverse('product-list'), {'sideload': 'unexisting'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         expected_loads = ['id', 'name', 'category', 'supplier', 'partner']
-        self.assertEqual(expected_loads, response.data[0].keys())
+        self.assertEqual(expected_loads, list(response.data[0].keys()))
 
     def test_sideloading_supplier_unexisting_mixed_existing_relation(self):
         response = self.client.get(reverse('product-list'), {'sideload': 'unexisting,supplier'})
@@ -201,8 +201,7 @@ class TestDrfSideloadingNoRelationsDefined(BaseTestCase):
         expected_error_message = "define `sideloadable_relations` class variable, while using `SideloadableRelationsMixin`"
 
         raised_exception = cm.exception
-        self.assertEqual(raised_exception.message, expected_error_message)
-
+        self.assertEqual(str(raised_exception), expected_error_message)
 
 
 class TestDrfSideloadingNegative(BaseTestCase, SideloadRelatedTestMixin, GeneralTestMixin):
