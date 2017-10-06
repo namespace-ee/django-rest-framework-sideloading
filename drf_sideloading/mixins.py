@@ -25,6 +25,7 @@ class SideloadableRelationsMixin(object):
                                             " specify serializer class by key "
                                             " 'primary': True, 'serializer': ...  ".format(relation_name))
                         return relation_name
+        raise Exception("It is required to define primary model {'primary': True, 'serializer': SerializerClass}")
 
     def list(self, request, *args, **kwargs):
         sideload = request.query_params.get(self.get_param_name(), None)
