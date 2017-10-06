@@ -47,9 +47,9 @@ Import Mixin `SideloadableRelationsMixin`:
     from drf_sideloading.mixins import SideloadableRelationsMixin
 
 
-Include mixin in view and define serializers dict `sideloadable_relations` as shown in examples
+Include mixin in view and define serializers dict ``sideloadable_relations`` as shown in examples
 
-It is `required` to define and indicate primary relationship in `sideloadable_relations` dict
+It is ``required`` to define and indicate primary relationship in ``sideloadable_relations`` dict
 
 Common Example of using library in ViewSet
 
@@ -71,10 +71,11 @@ Common Example of using library in ViewSet
 
 
 
-To test it out send `GET` request:
+To test it out send ``GET`` request:
 
 ``GET /product/?sideload=category,partner,supplier``
 
+Response looks like:
 
 .. sourcecode:: json
 
@@ -125,12 +126,12 @@ To test it out send `GET` request:
 Features
 --------
 
-`sideloadable_relations` dict values supports following types
-    * `serializers.Serializer` or subclass
-    * `dictionary` with following keys
-        * `primary` - indicates primary model
-        * `serializer` - serializer class
-        * `name` - override name of the sideloaded relation
+``sideloadable_relations`` dict values supports following types
+    * ``serializers.Serializer`` or subclass
+    * ``dictionary`` with following keys
+        * ``primary`` - indicates primary model
+        * ``serializer`` - serializer class
+        * ``name`` - override name of the sideloaded relation
 
 
 note: invalid or unexisting relation names will be ignored and only valid relation name matches will be used
