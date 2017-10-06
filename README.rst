@@ -47,11 +47,12 @@ Import Mixin `SideloadableRelationsMixin`:
     from drf_sideloading.mixins import SideloadableRelationsMixin
 
 
-Include mixin in view, define serializers dict `sideloadable_relations` and `base_model_name`
+Include mixin in view and define serializers dict `sideloadable_relations` as shown in examples
 
-Defining primary relationship is optional if defined defaults will be overrided
-In below case we define primary relationship along with side ones.
-By adding `'product': {'primary':True},` in `sideloadable_relations` dict we
+Defining primary relationship and indicating that it primary is required.
+
+In below example we define primary relationship along with side ones.
+By adding `'product': {'primary':True, 'serializer': ProductSerializer},` in `sideloadable_relations` dict we
 
 .. code-block:: python
 
@@ -63,7 +64,7 @@ By adding `'product': {'primary':True},` in `sideloadable_relations` dict we
         serializer_class = ProductSerializer
 
         sideloadable_relations = {
-            'product': {'primary':True},
+            'product': {'primary':True, 'serializer': ProductSerializer},
             'category': CategorySerializer,
             'supplier': SupplierSerializer,
             'partner': PartnerSerializer
@@ -71,9 +72,11 @@ By adding `'product': {'primary':True},` in `sideloadable_relations` dict we
 
 
 
-Add extra parameter and define comma separated relations:
+To sideloaded relations add extra parameter and define comma separated relations in any order
 
 ``GET /product/?sideload=category,partner,supplier``
+
+note: if invalid or unexisting relations are used it will be ignored and only valid relations will be loaded
 
 
 .. sourcecode:: json
@@ -121,7 +124,7 @@ Add extra parameter and define comma separated relations:
     }
 
 
-Another use case
+Another use case where you can change name of the loaded relation key
 
 .. code-block:: python
 

@@ -10,22 +10,21 @@ class SideloadableRelationsMixin(object):
     relation_names = []
 
     def __init__(self, **kwargs):
-        self.primary_serializer_class = self.get_serializer_class()
-
-        if not self.sideloadable_relations:
-            raise Exception
+        if not hasattr(self, 'sideloadable_relations'):
+            raise Exception("define `sideloadable_relations` class variable, while using `SideloadableRelationsMixin`")
         self.primary_object_name = self.get_primary_relation_name()
 
     def get_primary_relation_name(self):
+        """Determine name of the base(primary) relation"""
         for relation_name, properties in self.sideloadable_relations.items():
             if isinstance(properties, dict):
                 for name, value in properties.items():
                     if name == 'primary' and value:
                         if not properties.get('serializer'):
-                            self.sideloadable_relations[relation_name]['serializer'] = self.primary_serializer_class
+                            raise Exception("if {} relation is primary then, it is required to  "
+                                            " specify serializer class by key "
+                                            " 'primary': True, 'serializer': ...  ".format(relation_name))
                         return relation_name
-        self.sideloadable_relations[self.default_primary_object_name] = self.primary_serializer_class
-        return self.default_primary_object_name
 
     def list(self, request, *args, **kwargs):
         sideload = request.query_params.get(self.get_param_name(), None)
