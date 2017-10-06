@@ -20,7 +20,7 @@ drf-sideloading
 
 .. image:: https://img.shields.io/pypi/dm/drf-sideloading.svg?maxAge=3600
     :alt: PyPI Downloads
-    :target: https://pypi.python.org/pypi/django-rest-framework-sideloading
+    :target: https://pypi.python.org/pypi/drf-sideloading
 
 .. image:: https://img.shields.io/github/license/mashape/apistatus.svg?maxAge=2592000
     :alt: License is MIT
