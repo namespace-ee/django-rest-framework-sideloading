@@ -6,7 +6,7 @@ drf-sideloading
     :target: https://badge.fury.io/py/drf-sideloading
     :alt: Package Index
 
-.. image:: https://travis-ci.org/namespace-ee/drf-sideloading.svg?branch=master
+.. image:: https://travis-ci.org/namespace-ee/django-rest-framework-sideloading.svg?branch=master
     :target: https://travis-ci.org/namespace-ee/django-rest-framework-sideloading
     :alt: Build Status
 
