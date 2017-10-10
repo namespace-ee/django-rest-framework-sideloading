@@ -10,7 +10,7 @@ drf-sideloading
     :target: https://travis-ci.org/namespace-ee/django-rest-framework-sideloading
     :alt: Build Status
 
-.. image:: https://codecov.io/gh/namespace-ee/drf-sideloading/branch/master/graph/badge.svg
+.. image:: https://codecov.io/gh/namespace-ee/django-rest-framework-sideloading/branch/master/graph/badge.svg
     :target: https://codecov.io/gh/namespace-ee/django-rest-framework-sideloading
     :alt: Code Coverage
 
