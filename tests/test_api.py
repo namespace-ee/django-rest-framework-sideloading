@@ -269,6 +269,7 @@ class TestDrfSideloadingNoPrimaryIndicated(BaseTestCase):
         raised_exception = cm.exception
         self.assertEqual(str(raised_exception), expected_error_message)
 
+
 class TestDrfSideloadingNegative(BaseTestCase, SideloadRelatedTestMixin, GeneralTestMixin):
     """ Test Cases of incorrect use of API """
 
