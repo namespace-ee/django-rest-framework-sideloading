@@ -6,5 +6,5 @@ class OtherMixin(object):
 
     def get_serializer_class(self):
         if self.action in [u'user_permissions']:
-           pass
+            pass
         return super(OtherMixin, self).get_serializer_class()

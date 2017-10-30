@@ -246,7 +246,8 @@ class TestDrfSideloadingNoRelationsDefined(BaseTestCase):
         with self.assertRaises(Exception) as cm:
             self.client.get(reverse('product-list'), format='json')
 
-        expected_error_message = "It is required to define primary model {'primary': True, 'serializer': SerializerClass}"
+        expected_error_message = "It is required to define primary model {'primary': True, 'serializer': " \
+                                 "SerializerClass} "
 
         raised_exception = cm.exception
         self.assertEqual(str(raised_exception), expected_error_message)
@@ -264,10 +265,12 @@ class TestDrfSideloadingNoPrimaryIndicated(BaseTestCase):
         with self.assertRaises(Exception) as cm:
             self.client.get(reverse('product-list'), format='json')
 
-        expected_error_message = "define `sideloadable_relations` class variable, while using `SideloadableRelationsMixin`"
+        expected_error_message = "define `sideloadable_relations` class variable, while using " \
+                                 "`SideloadableRelationsMixin` "
 
         raised_exception = cm.exception
         self.assertEqual(str(raised_exception), expected_error_message)
+
 
 class TestDrfSideloadingNegative(BaseTestCase, SideloadRelatedTestMixin, GeneralTestMixin):
     """ Test Cases of incorrect use of API """
