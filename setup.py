@@ -58,7 +58,7 @@ setup(
     include_package_data=True,
     install_requires=[
         "Django>=1.8,<1.12",
-        "djangorestframework>=3.1.0,<3.7"
+        "djangorestframework>=3.1.0,<4"
     ],
     license="MIT",
     zip_safe=False,
