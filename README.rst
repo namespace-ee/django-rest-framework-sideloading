@@ -26,7 +26,7 @@ drf-sideloading
     :alt: License is MIT
     :target: https://github.com/namespace-ee/drf-sideloading/blob/master/LICENSE
 
-Extension for Django Rest Framework to enable simple sidloading
+Extension for Django Rest Framework to enable simple sideloading
 
 Documentation
 -------------
