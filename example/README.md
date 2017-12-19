@@ -11,13 +11,14 @@ To use latest version of cloned library export parent directory
 
     export PYTHONPATH=$PYTHONPATH:$(cd .. && pwd)
 
-## setup using script
-
-    sh scripts/devsetup.sh
-
 Or install desired release using pip
 
     pip install drf-sideloading==0.1.7
+
+
+## setup using script
+
+    sh scripts/devsetup.sh
 
 ## Run using script
 
