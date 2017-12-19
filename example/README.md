@@ -24,4 +24,11 @@ Or install desired release using pip
 
     sh scripts/dev.sh
 
-Visit browser: http://127.0.0.1:8000/
+Visit browser: 
+
+    http://127.0.0.1:8000/
+
+
+Test sideloading products endpoint
+
+    http://127.0.0.1:8000/product/?sideload=category,supplier,partner
