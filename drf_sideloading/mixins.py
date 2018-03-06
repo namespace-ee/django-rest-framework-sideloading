@@ -1,5 +1,5 @@
-from django.db.models import F
 from rest_framework.response import Response
+from itertools import chain
 
 from .serializers import SideLoadableSerializer
 
@@ -14,18 +14,6 @@ class SideloadableRelationsMixin(object):
         if not hasattr(self, 'sideloadable_relations'):
             raise Exception("define `sideloadable_relations` class variable, while using `SideloadableRelationsMixin`")
         self.primary_object_name = self.get_primary_relation_name()
-
-    def get_queryset(self):
-        qs = super(SideloadableRelationsMixin, self).get_queryset()
-        # prefetch relations
-        if self.relation_names:
-            prefetch_relations = {
-                relation['prefetch']
-                for name, relation in self.sideloadable_relations.items()
-                if name in self.relation_names and relation.get('prefetch')
-            }
-            return qs.prefetch_related(*(prefetch_relations))
-        return qs
 
     def get_primary_relation_name(self):
         """Determine name of the base(primary) relation"""
@@ -48,7 +36,14 @@ class SideloadableRelationsMixin(object):
             return super(SideloadableRelationsMixin, self).list(request, *args, **kwargs)
 
         # After this `relation_names` is safe to use
-        queryset = self.filter_queryset(self.get_queryset())
+        queryset = self.get_queryset()
+        if self.relation_names:
+            prefetch_relations = [
+                relation['prefetch'] for name, relation in self.sideloadable_relations.items()
+                if name in self.relation_names and relation.get('prefetch')
+            ]
+            queryset = queryset.prefetch_related(*set(chain(*prefetch_relations)))
+        queryset = self.filter_queryset(queryset)
 
         page = self.paginate_queryset(queryset)
         if page is not None:
@@ -75,16 +70,33 @@ class SideloadableRelationsMixin(object):
             (set(relation_names) & set(self.sideloadable_relations.keys())) - set([self.primary_object_name])
         return relation_names
 
-    def get_sideloadable_page(self, page):
-        sideloadable_page = {self.primary_object_name: page}
+    def get_sideloadable_page_from_queryset(self, queryset):
+        # this works wonders, but can't be used when page is paginated...
+        sideloadable_page = {self.primary_object_name: queryset}
         for rel in self.relation_names:
             # single_relation_set = set()
             source = self.sideloadable_relations[rel].get('source', rel)
             # i don't like how the model is found. there has to be a better way for this.. but it works
             rel_model = self.sideloadable_relations[rel]['serializer'].Meta.model
-            rel_qs = rel_model.objects.filter(pk__in=page.values_list(source, flat=True))
+            rel_qs = rel_model.objects.filter(pk__in=queryset.values_list(source, flat=True))
 
             sideloadable_page[rel] = rel_qs
+        return sideloadable_page
+
+    def filter_related_objects(self, related_objects, lookup):
+        current_lookup, remaining_lookup = lookup.split('__', 1) if '__' in lookup else (lookup, None)
+        related_objects_set = {getattr(r, current_lookup) for r in related_objects}
+        if related_objects_set and next(iter(related_objects_set)).__class__.__name__ in ['ManyRelatedManager', 'RelatedManager']:
+            related_objects_set = set(chain(*[related_queryset.all() for related_queryset in related_objects_set]))
+        if remaining_lookup:
+            return self.filter_related_objects(related_objects_set, remaining_lookup)
+        return set(related_objects_set) - {'', None}
+
+    def get_sideloadable_page(self, page):
+        sideloadable_page = {self.primary_object_name: page}
+        for rel in self.relation_names:
+            source = self.sideloadable_relations[rel].get('source', rel)
+            sideloadable_page[rel] = self.filter_related_objects(related_objects=page, lookup=source)
         return sideloadable_page
 
     def get_serializer_class(self):
