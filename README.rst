@@ -63,30 +63,30 @@ Common Example of using library in ViewSet
         serializer_class = ProductSerializer
 
         sideloadable_relations = {
-            'product': {'primary':True, 'serializer': ProductSerializer},
-            'category': {'serializer': CategorySerializer, 'name': 'categories'},
-            'supplier': SupplierSerializer,
-            'partner': PartnerSerializer
+            'products': {'primary': True, 'serializer': ProductSerializer},
+            'categories': {'serializer': CategorySerializer, 'source': 'category', 'prefetch': 'category'},
+            'suppliers': {'serializer': SupplierSerializer, 'source': 'supplier', 'prefetch': 'supplier'},
+            'partners': {'serializer': PartnerSerializer, 'source': 'partners', 'prefetch': 'partners'}
         }
 
 
 
 To test it out send ``GET`` request:
 
-``GET /product/?sideload=category,partner,supplier``
+``GET /product/?sideload=categories,partners,suppliers``
 
 Response looks like:
 
 .. sourcecode:: json
 
     {
-        "category": [
+        "categories": [
             {
                 "id": 1,
                 ...
             }
         ],
-        "partner": [
+        "partners": [
             {
                 "id": 1,
                 ...
@@ -100,7 +100,7 @@ Response looks like:
                 ...
             }
         ],
-        "product": [
+        "products": [
             {
                 "id": 1,
                 "name": "Product 1",
@@ -113,7 +113,7 @@ Response looks like:
                 ]
             }
         ],
-        "supplier": [
+        "suppliers": [
             {
                 "id": 1,
                 ...
