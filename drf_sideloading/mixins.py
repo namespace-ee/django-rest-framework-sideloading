@@ -37,11 +37,12 @@ class SideloadableRelationsMixin(object):
 
         # After this `relation_names` is safe to use
         queryset = self.get_queryset()
-        if self.relation_names:
-            prefetch_relations = [
-                relation['prefetch'] for name, relation in self.sideloadable_relations.items()
-                if name in self.relation_names and relation.get('prefetch')
-            ]
+
+        prefetch_relations = [
+            relation['prefetch'] for name, relation in self.sideloadable_relations.items()
+            if name in self.relation_names and relation.get('prefetch')
+        ]
+        if prefetch_relations:
             queryset = queryset.prefetch_related(*set(chain(*prefetch_relations)))
         queryset = self.filter_queryset(queryset)
 
@@ -51,7 +52,7 @@ class SideloadableRelationsMixin(object):
             serializer = self.get_serializer(sideloadable_page)
             return self.get_paginated_response(serializer.data)
 
-        sideloadable_page = self.get_sideloadable_page(queryset)
+        sideloadable_page = self.get_sideloadable_page_from_queryset(queryset)
         serializer = self.get_serializer(sideloadable_page)
         return Response(serializer.data)
 
