@@ -51,7 +51,7 @@ Include mixin in view and define serializers dict ``sideloadable_relations`` as 
 
 It is ``required`` to define and indicate primary relationship in ``sideloadable_relations`` dict
 
-Common Example of using library in ViewSet
+Example of using mixin in ViewSet
 
 .. code-block:: python
 
@@ -63,30 +63,30 @@ Common Example of using library in ViewSet
         serializer_class = ProductSerializer
 
         sideloadable_relations = {
-            'product': {'primary':True, 'serializer': ProductSerializer},
-            'category': {'serializer': CategorySerializer, 'name': 'categories'},
-            'supplier': SupplierSerializer,
-            'partner': PartnerSerializer
-        }
+            'products': {'primary': True, 'serializer': ProductSerializer},
+            'categories': {'serializer': CategorySerializer, 'source': 'category', 'prefetch': ['category']},
+            'suppliers': {'serializer': SupplierSerializer, 'source': 'supplier', 'prefetch': ['supplier']},
+            'partners': {'serializer': PartnerSerializer, 'source': 'partners', 'prefetch': ['partners']}
+    }
 
 
 
 To test it out send ``GET`` request:
 
-``GET /product/?sideload=category,partner,supplier``
+``GET /product/?sideload=categories,partners,suppliers``
 
 Response looks like:
 
 .. sourcecode:: json
 
     {
-        "category": [
+        "categories": [
             {
                 "id": 1,
                 ...
             }
         ],
-        "partner": [
+        "partners": [
             {
                 "id": 1,
                 ...
@@ -100,7 +100,7 @@ Response looks like:
                 ...
             }
         ],
-        "product": [
+        "products": [
             {
                 "id": 1,
                 "name": "Product 1",
@@ -113,7 +113,7 @@ Response looks like:
                 ]
             }
         ],
-        "supplier": [
+        "suppliers": [
             {
                 "id": 1,
                 ...
@@ -123,24 +123,18 @@ Response looks like:
 
 
 
-Features
---------
 
-``sideloadable_relations`` dict values supports following types
-    * ``serializers.Serializer`` or subclass
-    * ``dictionary`` with following keys
-        * ``primary`` - indicates primary model
-        * ``serializer`` - serializer class
-        * ``name`` - override name of the sideloaded relation
+Example Project
+-----------------------
 
+    directory `example` includes example project
+    you can setup and run int locally using following commands
 
-note: invalid or unexisting relation names will be ignored and only valid relation name matches will be used
+::
 
-TODO
-
-* fix documentation
-* improve coverage
-* python3 support
+    cd example
+    sh scripts/devsetup.sh
+    sh scripts/dev.sh
 
 
 Running Tests
@@ -153,6 +147,23 @@ Does the code actually work?
     source <YOURVIRTUALENV>/bin/activate
     (myenv) $ pip install tox
     (myenv) $ tox
+
+
+manually specify env
+
+::
+
+    export TOX_ENV=py36-django18-drf34
+    tox -e $TOX_ENV
+
+
+
+# TODO
+
+* fix documentation
+* improve coverage
+
+
 
 Credits
 -------
