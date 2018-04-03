@@ -64,10 +64,10 @@ Common Example of using library in ViewSet
 
         sideloadable_relations = {
             'products': {'primary': True, 'serializer': ProductSerializer},
-            'categories': {'serializer': CategorySerializer, 'source': 'category', 'prefetch': 'category'},
-            'suppliers': {'serializer': SupplierSerializer, 'source': 'supplier', 'prefetch': 'supplier'},
-            'partners': {'serializer': PartnerSerializer, 'source': 'partners', 'prefetch': 'partners'}
-        }
+            'categories': {'serializer': CategorySerializer, 'source': 'category', 'prefetch': ['category']},
+            'suppliers': {'serializer': SupplierSerializer, 'source': 'supplier', 'prefetch': ['supplier']},
+            'partners': {'serializer': PartnerSerializer, 'source': 'partners', 'prefetch': ['partners']}
+    }
 
 
 
@@ -123,24 +123,12 @@ Response looks like:
 
 
 
-Features
---------
+Running Example Project
+-----------------------
 
-``sideloadable_relations`` dict values supports following types
-    * ``serializers.Serializer`` or subclass
-    * ``dictionary`` with following keys
-        * ``primary`` - indicates primary model
-        * ``serializer`` - serializer class
-        * ``name`` - override name of the sideloaded relation
-
-
-note: invalid or unexisting relation names will be ignored and only valid relation name matches will be used
-
-TODO
-
-* fix documentation
-* improve coverage
-* python3 support
+    cd example
+    sh scripts/devsetup.sh
+    sh scripts/dev.sh
 
 
 Running Tests
@@ -153,6 +141,16 @@ Does the code actually work?
     source <YOURVIRTUALENV>/bin/activate
     (myenv) $ pip install tox
     (myenv) $ tox
+
+
+
+# TODO
+
+* fix documentation
+* improve coverage
+* python3 support
+
+
 
 Credits
 -------

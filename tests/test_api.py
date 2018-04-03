@@ -7,7 +7,6 @@ test_drf-sideloading
 
 Tests for `drf-sideloading` models api.
 """
-import unittest
 
 from django.core.urlresolvers import reverse
 from django.test import TestCase
@@ -15,7 +14,7 @@ from rest_framework import status
 
 from tests.models import Category, Supplier, Product, Partner
 from tests.serializers import ProductSerializer, CategorySerializer, SupplierSerializer, PartnerSerializer
-from tests.viewsets import ProductViewSet
+from tests.viewsets import ProductViewSet, CategoryViewSet
 
 
 class BaseTestCase(TestCase):
@@ -37,9 +36,9 @@ class BaseTestCase(TestCase):
 
 
 class GeneralTestMixin(object):
-    """Tests for general purpose without requesting sideloading enabled
+    """Test general purpose without requesting sideloading enabled
 
-    Checks that drf-sideloading mixin doesn't break anything"""
+    Check that drf-sideloading mixin doesn't break anything"""
 
     def test_product_list(self):
         response = self.client.get(reverse('product-list'), format='json')
@@ -48,31 +47,27 @@ class GeneralTestMixin(object):
         self.assertEqual(1, len(response.data))
         self.assertEqual('Product', response.data[0]['name'])
 
+    def test_category_list(self):
+        response = self.client.get(reverse('category-list'), format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-class SideloadRelatedTestMixin(object):
-    """Sideloading enabled test cases
+        self.assertEqual(1, len(response.data))
+        self.assertEqual('Category', response.data[0]['name'])
 
-    Primary model is Product
-    Request sideload of different combination of `category` `supplier` and `partner` relations
 
-    Can be reused by Overriding configurations in setUpClass
-
-    If reusing this mixing ViewSet should have define all relations
-
-    `product`, `category`, `supplier` and `partner`
-
-    and should setup expected relation_names in setUpClass
-
-    example:
+class ProductSideloadTestCase(GeneralTestMixin, BaseTestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.primary_relation_name = 'product'
-        cls.category_relation_name = 'categories'
-        cls.supplier_relation_name = 'suppliers'
-        cls.partner_relation_name = 'partners'
+        super(ProductSideloadTestCase, cls).setUpClass()
 
-    """
+        sideloadable_relations = {
+            'products': {'primary': True, 'serializer': ProductSerializer},
+            'categories': {'serializer': CategorySerializer, 'source': 'category', 'prefetch': 'category'},
+            'suppliers': {'serializer': SupplierSerializer, 'source': 'supplier', 'prefetch': 'supplier'},
+            'partners': {'serializer': PartnerSerializer, 'source': 'partners', 'prefetch': 'partners'}
+        }
+        ProductViewSet.sideloadable_relations = sideloadable_relations
 
     def test_sideloading_product_list(self):
         """Test sideloading for all defined relations"""
@@ -174,20 +169,31 @@ class SideloadRelatedTestMixin(object):
         self.assertEqual(set(expected_relation_names), set(response.data))
 
 
-class TestDrfSideloading(BaseTestCase, SideloadRelatedTestMixin, GeneralTestMixin):
-    """Test most common use case of the library"""
+class CategorySideloadTestCase(GeneralTestMixin, BaseTestCase):
 
     @classmethod
     def setUpClass(cls):
-        super(TestDrfSideloading, cls).setUpClass()
+        super(CategorySideloadTestCase, cls).setUpClass()
 
         sideloadable_relations = {
-            'products': {'primary': True, 'serializer': ProductSerializer},
-            'categories': {'source': 'category', 'serializer': CategorySerializer},
-            'suppliers': {'source': 'supplier', 'serializer': SupplierSerializer},
-            'partners': {'source': 'partners', 'serializer': PartnerSerializer}
+            'categories': {'primary': True, 'serializer': CategorySerializer},
+            'products': {'serializer': ProductSerializer, 'source': 'products', 'prefetch': 'products'},
+            'suppliers': {'serializer': SupplierSerializer, 'source': 'products__supplier', 'prefetch': 'products__supplier'},
+            'partners': {'serializer': PartnerSerializer, 'source': 'products__partners', 'prefetch': 'products__partners'}
         }
-        ProductViewSet.sideloadable_relations = sideloadable_relations
+
+        CategoryViewSet.sideloadable_relations = sideloadable_relations
+        CategoryViewSet.query_param_name = 's'
+
+    def test_sideloading_category_list(self):
+        """Test sideloading for all defined relations"""
+        response = self.client.get(reverse('category-list'), {'s': 'products,suppliers,partners'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        expected_relation_names = ['products', 'categories', 'suppliers', 'partners']
+
+        self.assertEqual(4, len(response.data))
+        self.assertEqual(set(expected_relation_names), set(response.data))
 
 
 # incorrect use of API

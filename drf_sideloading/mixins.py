@@ -6,8 +6,6 @@ from .serializers import SideLoadableSerializer
 
 class SideloadableRelationsMixin(object):
     query_param_name = 'sideload'
-    default_primary_object_name = 'self'
-
     relation_names = []
 
     def __init__(self, **kwargs):
@@ -39,7 +37,8 @@ class SideloadableRelationsMixin(object):
         queryset = self.get_queryset()
 
         prefetch_relations = [
-            relation['prefetch'] for name, relation in self.sideloadable_relations.items()
+            [relation['prefetch']] if isinstance(relation['prefetch'], str) else relation['prefetch']
+            for name, relation in self.sideloadable_relations.items()
             if name in self.relation_names and relation.get('prefetch')
         ]
         if prefetch_relations:

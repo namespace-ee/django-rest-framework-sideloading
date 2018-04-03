@@ -20,7 +20,7 @@ class ProductViewSet(SideloadableRelationsMixin, OtherMixin, viewsets.ModelViewS
     }
 
 
-class CategoryViewSet(viewsets.ModelViewSet):
+class CategoryViewSet(SideloadableRelationsMixin, viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     sideloadable_relations = {
