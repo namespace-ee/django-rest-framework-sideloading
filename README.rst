@@ -51,7 +51,7 @@ Include mixin in view and define serializers dict ``sideloadable_relations`` as 
 
 It is ``required`` to define and indicate primary relationship in ``sideloadable_relations`` dict
 
-Common Example of using library in ViewSet
+Example of using mixin in ViewSet
 
 .. code-block:: python
 
@@ -123,8 +123,14 @@ Response looks like:
 
 
 
-Running Example Project
+
+Example Project
 -----------------------
+
+    directory `example` includes example project
+    you can setup and run int locally using following commands
+
+::
 
     cd example
     sh scripts/devsetup.sh
@@ -143,7 +149,9 @@ Does the code actually work?
     (myenv) $ tox
 
 
-Run using spesific env
+manually specify env
+
+::
 
     export TOX_ENV=py36-django18-drf34
     tox -e $TOX_ENV
@@ -154,7 +162,6 @@ Run using spesific env
 
 * fix documentation
 * improve coverage
-* python3 support
 
 
 
