@@ -37,7 +37,7 @@ class SideloadableRelationsMixin(object):
         queryset = self.get_queryset()
 
         prefetch_relations = [
-            [relation['prefetch']] if isinstance(relation['prefetch'], str) else relation['prefetch']
+            [relation['prefetch']] if isinstance(relation['prefetch'], (unicode, str)) else relation['prefetch']
             for name, relation in self.sideloadable_relations.items()
             if name in self.relation_names and relation.get('prefetch')
         ]
