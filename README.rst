@@ -143,6 +143,12 @@ Does the code actually work?
     (myenv) $ tox
 
 
+Run using spesific env
+
+    export TOX_ENV=py36-django18-drf34
+    tox -e $TOX_ENV
+
+
 
 # TODO
 
