@@ -13,10 +13,7 @@ class ProductViewSet(SideloadableRelationsMixin, OtherMixin, viewsets.ModelViewS
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
     sideloadable_relations = {
-        'products': {'primary': True, 'serializer': ProductSerializer},
-        'categories': {'serializer': CategorySerializer, 'source': 'category', 'prefetch': 'category'},
-        'suppliers': {'serializer': SupplierSerializer, 'source': 'supplier', 'prefetch': 'supplier'},
-        'partners': {'serializer': PartnerSerializer, 'source': 'partners', 'prefetch': 'partners'}
+        # definition is monkey patched in tests setup
     }
 
 
@@ -24,10 +21,7 @@ class CategoryViewSet(SideloadableRelationsMixin, viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     sideloadable_relations = {
-        'categories': {'primary': True, 'serializer': CategorySerializer},
-        'products': {'serializer': ProductSerializer, 'source': 'products', 'prefetch': 'products'},
-        'suppliers': {'serializer': SupplierSerializer, 'source': 'products__supplier', 'prefetch': 'products__supplier'},
-        'partners': {'serializer': PartnerSerializer, 'source': 'products__partners', 'prefetch': 'products__partners'}
+        # definition is monkey patched in tests setup
     }
 
 

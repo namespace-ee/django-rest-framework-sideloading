@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+from __future__ import unicode_literals
+
 from django.db import models
 
 
@@ -15,6 +18,6 @@ class Partner(models.Model):
 
 class Product(models.Model):
     name = models.CharField(max_length=255)
-    category = models.ForeignKey(Category, related_name='products')
-    supplier = models.ForeignKey(Supplier, related_name='products')
+    category = models.ForeignKey(Category, related_name='products', on_delete=models.CASCADE)
+    supplier = models.ForeignKey(Supplier, related_name='products', on_delete=models.CASCADE)
     partners = models.ManyToManyField(Partner, related_name='products')
