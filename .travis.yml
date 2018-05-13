@@ -3,7 +3,7 @@
 language: python
 
 python:
-  - "2.7"  
+  - "2.7"
   - "3.6"
 
 matrix:
@@ -12,10 +12,10 @@ matrix:
 # command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
 install:
   - pip install -r requirements_test.txt
-  - pip install tox-travis
 
 # command to run tests using coverage, e.g. python setup.py test
-script: tox
+script:
+  - tox
 
 after_success:
   - codecov -e TOX_ENV
