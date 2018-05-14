@@ -18,10 +18,6 @@ drf-sideloading
     :target: http://drf-sideloading.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status
 
-.. image:: https://img.shields.io/pypi/dm/drf-sideloading.svg?maxAge=3600
-    :alt: PyPI Downloads
-    :target: https://pypi.python.org/pypi/drf-sideloading
-
 .. image:: https://img.shields.io/github/license/mashape/apistatus.svg?maxAge=2592000
     :alt: License is MIT
     :target: https://github.com/namespace-ee/drf-sideloading/blob/master/LICENSE
@@ -49,7 +45,7 @@ Import Mixin `SideloadableRelationsMixin`:
 
 Include mixin in view and define serializers dict ``sideloadable_relations`` as shown in examples
 
-It is ``required`` to define and indicate primary relationship in ``sideloadable_relations`` dict
+It is ``required`` to define and indicate a ``primary`` relationship in ``sideloadable_relations`` dict
 
 Example of using mixin in ViewSet
 
@@ -64,20 +60,17 @@ Example of using mixin in ViewSet
 
         sideloadable_relations = {
             'products': {'primary': True, 'serializer': ProductSerializer},
-            'categories': {'serializer': CategorySerializer, 'source': 'category', 'prefetch': ['category']},
-            'suppliers': {'serializer': SupplierSerializer, 'source': 'supplier', 'prefetch': ['supplier']},
-            'partners': {'serializer': PartnerSerializer, 'source': 'partners', 'prefetch': ['partners']}
-    }
+            'categories': {'serializer': CategorySerializer, 'source': 'category', 'prefetch': 'category'},
+            'suppliers': {'serializer': SupplierSerializer, 'source': 'supplier', 'prefetch': 'supplier'},
+            'partners': {'serializer': PartnerSerializer, 'source': 'partners', 'prefetch': 'partners'}
+        }
 
 
+Request::
 
-To test it out send ``GET`` request:
+    GET /product/?sideload=categories,partners,suppliers
 
-``GET /product/?sideload=categories,partners,suppliers``
-
-Response looks like:
-
-.. sourcecode:: json
+Response::
 
     {
         "categories": [
@@ -137,25 +130,36 @@ Example Project
     sh scripts/dev.sh
 
 
-Running Tests
+Contributing
 -------------
 
-Does the code actually work?
+For detailed description see `CONTRIBUTING Notes <https://github.com/namespace-ee/django-rest-framework-sideloading/blob/master/CONTRIBUTING.rst>`_
+
+Setup for contribution
+
 
 ::
 
     source <YOURVIRTUALENV>/bin/activate
-    (myenv) $ pip install tox
-    (myenv) $ tox
+    (myenv) $ pip install -r requirements_dev.txt
 
 
-manually specify env
+Test with specific env
 
 ::
 
-    export TOX_ENV=py36-django18-drf34
-    tox -e $TOX_ENV
+    $ tox --listenvs
+    py27-django18-drf34
+    py27-django19-drf34
+    # ...
+    $ tox -e py27-django19-drf34
 
+
+Test coverage
+
+::
+
+    $ make coverage
 
 
 # TODO
