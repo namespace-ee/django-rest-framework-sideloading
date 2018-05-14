@@ -1,6 +1,7 @@
 *.py[cod]
 __pycache__
 env
+.python-version
 
 # C extensions
 *.so
