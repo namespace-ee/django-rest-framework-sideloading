@@ -162,6 +162,9 @@ Test coverage
     $ make coverage
 
 
+
+Use `pyenv <https://github.com/pyenv/pyenv>`_ for testing using different versions locally
+
 # TODO
 
 * fix documentation

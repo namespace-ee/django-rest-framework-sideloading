@@ -3,13 +3,19 @@
 
 from __future__ import unicode_literals
 
-from django.core.urlresolvers import reverse
+from tests import DJANGO_20
+
 from django.test import TestCase
 from rest_framework import status
 
 from tests.models import Category, Supplier, Product, Partner
 from tests.serializers import ProductSerializer, CategorySerializer, SupplierSerializer, PartnerSerializer
 from tests.viewsets import ProductViewSet, CategoryViewSet
+
+if DJANGO_20:
+    from django.urls import reverse
+else:
+    from django.core.urlresolvers import reverse
 
 
 class BaseTestCase(TestCase):
