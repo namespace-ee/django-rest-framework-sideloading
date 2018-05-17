@@ -16,6 +16,10 @@ class ProductViewSet(SideloadableRelationsMixin, OtherMixin, viewsets.ModelViewS
         # definition is monkey patched in tests setup
     }
 
+    def get_serializer_class(self):
+        # if no super is called sideloading should still work
+        return self.serializer_class
+
 
 class CategoryViewSet(SideloadableRelationsMixin, viewsets.ModelViewSet):
     queryset = Category.objects.all()
