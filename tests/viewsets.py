@@ -28,6 +28,10 @@ class CategoryViewSet(SideloadableRelationsMixin, viewsets.ModelViewSet):
         # definition is monkey patched in tests setup
     }
 
+    def get_serializer_class(self):
+        pass
+    def get_serializer(self, *args, **kwargs):
+        pass
 
 class SupplierViewSet(viewsets.ModelViewSet):
     queryset = Supplier.objects.all()

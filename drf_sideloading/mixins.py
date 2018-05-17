@@ -50,11 +50,11 @@ class SideloadableRelationsMixin(object):
         page = self.paginate_queryset(queryset)
         if page is not None:
             sideloadable_page = self.get_sideloadable_page(page)
-            serializer = self.get_serializer(sideloadable_page)
+            serializer = self.get_sideloadable_serializer(sideloadable_page)
             return self.get_paginated_response(serializer.data)
 
         sideloadable_page = self.get_sideloadable_page_from_queryset(queryset)
-        serializer = self.get_serializer(sideloadable_page)
+        serializer = self.get_sideloadable_serializer(sideloadable_page)
         return Response(serializer.data)
 
     def parse_query_param(self, sideload_relations):
@@ -101,8 +101,11 @@ class SideloadableRelationsMixin(object):
             sideloadable_page[rel] = self.filter_related_objects(related_objects=page, lookup=source)
         return sideloadable_page
 
-    def get_serializer_class(self):
-        if self.relation_names and self.action == 'list':
-            return SideLoadableSerializer
-
-        return super(SideloadableRelationsMixin, self).get_serializer_class()
+    def get_sideloadable_serializer(self, *args, **kwargs):
+        """
+        Return the serializer instance that should be used for validating and
+        deserializing input, and for serializing output.
+        """
+        serializer_class = SideLoadableSerializer
+        kwargs['context'] = self.get_serializer_context()
+        return serializer_class(*args, **kwargs)
