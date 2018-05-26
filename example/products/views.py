@@ -2,7 +2,8 @@ from rest_framework import viewsets
 
 from drf_sideloading.mixins import SideloadableRelationsMixin
 from .models import Product, Category, Supplier, Partner
-from .serializers import ProductSerializer, CategorySerializer, SupplierSerializer, PartnerSerializer
+from .serializers import ProductSerializer, CategorySerializer, SupplierSerializer, PartnerSerializer, \
+    ProductSideloadableSerializer
 
 
 class ProductViewSet(SideloadableRelationsMixin, viewsets.ModelViewSet):
@@ -11,13 +12,7 @@ class ProductViewSet(SideloadableRelationsMixin, viewsets.ModelViewSet):
     """
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
-
-    sideloadable_relations = {
-        'products': {'primary': True, 'serializer': ProductSerializer},
-        'categories': {'serializer': CategorySerializer, 'source': 'category', 'prefetch': 'category'},
-        'suppliers': {'serializer': SupplierSerializer, 'source': 'supplier', 'prefetch': 'supplier'},
-        'partners': {'serializer': PartnerSerializer, 'source': 'partners', 'prefetch': 'partners'}
-    }
+    sideloadable_serializer_class = ProductSideloadableSerializer
 
 
 class CategoryViewSet(SideloadableRelationsMixin, viewsets.ModelViewSet):
