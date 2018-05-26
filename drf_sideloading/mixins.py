@@ -47,7 +47,7 @@ class SideloadableRelationsMixin(object):
         queryset = self.get_queryset()
 
         # add prefetches if applicable
-        prefetch_relations = self._sideloadable_serializer.get_prefetches()
+        prefetch_relations = self.get_relevant_prefetches()
         if prefetch_relations:
             queryset = queryset.prefetch_related(*prefetch_relations)
         queryset = self.filter_queryset(queryset)
@@ -56,11 +56,11 @@ class SideloadableRelationsMixin(object):
         page = self.paginate_queryset(queryset)
         if page is not None:
             sideloadable_page = self.get_sideloadable_page(page)
-            serializer = self.get_sideloadable_serializer(sideloadable_page)
+            serializer = self._sideloadable_serializer.initiate_serializer(data=sideloadable_page)
             return self.get_paginated_response(serializer.data)
 
         sideloadable_page = self.get_sideloadable_page_from_queryset(queryset)
-        serializer = self.get_sideloadable_serializer(sideloadable_page)
+        serializer = self._sideloadable_serializer.initiate_serializer(data=sideloadable_page)
         return Response(serializer.data)
 
     def parse_query_param(self, sideload_parameter):
@@ -78,16 +78,32 @@ class SideloadableRelationsMixin(object):
 
     def get_sideloadable_page_from_queryset(self, queryset):
         # this works wonders, but can't be used when page is paginated...
-        sideloadable_page = {self._primary_field_name: queryset}
-        for rel in self.relations_to_sideload:
-            # single_relation_set = set()
-            source = self.sideloadable_relations[rel].get('source', rel)
-            # i don't like how the model is found. there has to be a better way for this.. but it works
-            rel_model = self.sideloadable_relations[rel]['serializer'].Meta.model
-            rel_qs = rel_model.objects.filter(pk__in=queryset.values_list(source, flat=True))
-
-            sideloadable_page[rel] = rel_qs
+        sideloadable_page = {}
+        sl_fields = self._sideloadable_serializer.fields
+        for relation in self.relations_to_sideload:
+            if isinstance(sl_fields[relation], SideloadablePrimaryField):
+                sideloadable_page[relation] = queryset
+            else:
+                source = sl_fields[relation].source or relation
+                rel_model = sl_fields[relation]['serializer'].Meta.model
+                rel_qs = rel_model.objects.filter(pk__in=queryset.values_list(source, flat=True))
+                sideloadable_page[relation] = rel_qs
         return sideloadable_page
+
+    def get_sideloadable_page(self, page):
+        sideloadable_page = {}
+        sl_fields = self._sideloadable_serializer.fields
+        for relation in self.relations_to_sideload:
+            if isinstance(sl_fields[relation], SideloadablePrimaryField):
+                sideloadable_page[relation] = page
+            else:
+                source = sl_fields[relation].source or relation
+                sideloadable_page[relation] = self.filter_related_objects(related_objects=page, lookup=source)
+        return sideloadable_page
+
+    def get_relevant_prefetches(self):
+        sl_fields = self._sideloadable_serializer.fields
+        return set(chain(sl_fields[relation].get_prefetches() for relation in self.relations_to_sideload))
 
     def filter_related_objects(self, related_objects, lookup):
         current_lookup, remaining_lookup = lookup.split('__', 1) if '__' in lookup else (lookup, None)
@@ -97,19 +113,3 @@ class SideloadableRelationsMixin(object):
         if remaining_lookup:
             return self.filter_related_objects(related_objects_set, remaining_lookup)
         return set(related_objects_set) - {'', None}
-
-    def get_sideloadable_page(self, page):
-        sideloadable_page = {self._primary_field_name: page}
-        for rel in self.relations_to_sideload:
-            source = self._sideloadable_fields[rel].source or rel
-            sideloadable_page[rel] = self.filter_related_objects(related_objects=page, lookup=source)
-        return sideloadable_page
-
-    def get_sideloadable_serializer(self, *args, **kwargs):
-        """
-        Return the serializer instance that should be used for validating and
-        deserializing input, and for serializing output.
-        """
-        serializer_class = self._sideloadable_serializer
-        kwargs['context'] = self.get_serializer_context()
-        return serializer_class(*args, **kwargs)

@@ -9,15 +9,12 @@ class SideLoadableSerializer(serializers.Serializer):
 
     def __init__(self, *args, **kwargs):
         super(SideLoadableSerializer, self).__init__(*args, **kwargs)
-
         # fix for drf browsable api
         # https://github.com/encode/django-rest-framework/blob/master/rest_framework/renderers.py#L530
         self.many = True
-        # add many=True, read_only=True to fields as default.
-        for relation_name in args[0].keys():
-            relation_property = kwargs['context']['view'].sideloadable_relations[relation_name]
-            serializer_class = relation_property['serializer']
-            self.fields[relation_name] = serializer_class(many=True, read_only=True)
+
+    class Meta:
+        fields = '__all__'
 
     def get_primary_field_name(self):
         """Determine name of the base(primary) relation"""
@@ -31,14 +28,15 @@ class SideLoadableSerializer(serializers.Serializer):
     def get_sideloadable_fields(self):
         return {field_name: field for field_name, field in self.fields if isinstance(field, SideloadableRelationField)}
 
-    def get_primary_serializer(self):
-        return self.fields[self.get_primary_field_name()].serializer
-
-    def get_prefetches(self):
+    def initiate_serializer(self, data, **kwargs):
         """
         get and prepare all required prefetches
 
         :return:
         :rtype:
         """
-        return set(chain(field.get_prefetches() for field in self.get_sideloadable_fields().values()))
+        class SerializerXXX(serializers.Serializer):
+            for fieldname, field in self.fields:
+                fieldname = field.serializer(source=field.source)
+
+        return SerializerXXX

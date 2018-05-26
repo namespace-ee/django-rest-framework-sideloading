@@ -22,3 +22,16 @@ class SideloadableRelationField(object):
             return self.prefetch
         else:
             raise Exception("All sideloadable relation prefetches must be defined as list of strings")
+
+    def get_as_serializer(self, **kwargs):
+        """
+        made as a separate method in case we want to try and find the relations automatically?
+
+        :return: prefetch_relations
+        :rtype: list
+        """
+        return self.serializer(source=self.source, many=True, read_only=True, **kwargs)
+
+
+class SideloadablePrimaryField(SideloadableRelationField):
+    pass
