@@ -12,7 +12,7 @@ class ProductViewSet(SideloadableRelationsMixin, viewsets.ModelViewSet):
     """
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
-    sideloadable_serializer_class = ProductSideloadableSerializer
+    sideloading_serializer_class = ProductSideloadableSerializer
 
 
 class CategoryViewSet(SideloadableRelationsMixin, viewsets.ModelViewSet):
@@ -22,7 +22,7 @@ class CategoryViewSet(SideloadableRelationsMixin, viewsets.ModelViewSet):
 
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    sideloadable_serializer_class = CategorySideloadableSerializer
+    sideloading_serializer_class = CategorySideloadableSerializer
 
 
 class SupplierViewSet(viewsets.ModelViewSet):

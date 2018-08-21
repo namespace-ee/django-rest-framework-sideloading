@@ -3,7 +3,8 @@ from rest_framework import viewsets
 from drf_sideloading.mixins import SideloadableRelationsMixin
 from tests.mixins import OtherMixin
 from tests.models import Product, Category, Supplier, Partner
-from tests.serializers import ProductSerializer, CategorySerializer, SupplierSerializer, PartnerSerializer
+from tests.serializers import ProductSerializer, CategorySerializer, SupplierSerializer, PartnerSerializer, \
+    ProductSideloadableSerializer, CategorySideloadableSerializer
 
 
 class ProductViewSet(SideloadableRelationsMixin, OtherMixin, viewsets.ModelViewSet):
@@ -12,7 +13,7 @@ class ProductViewSet(SideloadableRelationsMixin, OtherMixin, viewsets.ModelViewS
     """
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
-    sideloadable_serializer_class = None
+    sideloadable_serializer_class = ProductSideloadableSerializer
 
     def get_serializer_class(self):
         # if no super is called sideloading should still work
@@ -22,7 +23,7 @@ class ProductViewSet(SideloadableRelationsMixin, OtherMixin, viewsets.ModelViewS
 class CategoryViewSet(SideloadableRelationsMixin, viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    sideloadable_serializer_class = None
+    sideloadable_serializer_class = CategorySideloadableSerializer
 
 
 class SupplierViewSet(viewsets.ModelViewSet):

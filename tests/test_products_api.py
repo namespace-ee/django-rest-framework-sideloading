@@ -10,7 +10,8 @@ from django.test import TestCase
 from rest_framework import status
 
 from tests.models import Category, Supplier, Product, Partner
-from tests.serializers import ProductSerializer, CategorySerializer, SupplierSerializer, PartnerSerializer
+from tests.serializers import ProductSerializer, CategorySerializer, SupplierSerializer, PartnerSerializer, \
+    CategorySideloadableSerializer
 from tests.viewsets import ProductViewSet, CategoryViewSet
 
 if DJANGO_20:
@@ -205,21 +206,7 @@ class CategorySideloadTestCase(BaseTestCase):
     def setUpClass(cls):
         super(CategorySideloadTestCase, cls).setUpClass()
 
-        class CategorySideloadableSerializer(SideLoadableSerializer):
-            categories = CategorySerializer()
-            products = ProductSerializer(source='products')
-            suppliers = SupplierSerializer(source='products__supplier')
-            partners = PartnerSerializer(source='products__partners')
-
-            class Meta:
-                primary = 'categories'
-                prefetches = {
-                    'products': 'products',
-                    'suppliers': 'products__supplier',
-                    'partners': 'products__partners',
-                }
-
-        ProductViewSet.sideloadable_serializer_class = CategorySideloadableSerializer
+        CategoryViewSet.sideloadable_serializer_class = CategorySideloadableSerializer
         CategoryViewSet.query_param_name = 's'
 
     def test_sideloading_category_list(self):

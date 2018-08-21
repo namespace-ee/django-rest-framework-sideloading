@@ -1,19 +1,22 @@
+
 from rest_framework import serializers
 
 
 class SideLoadableSerializer(serializers.Serializer):
-
-    def __init__(self, *args, **kwargs):
-        super(SideLoadableSerializer, self).__init__(*args, **kwargs)
-
-        # fix for drf browsable api
-        # https://github.com/encode/django-rest-framework/blob/master/rest_framework/renderers.py#L530
-
-        for field in self.fields():
-            field.many = True
-            field.read_only = True
-            field.required = False
-            field.allow_null = True
-
-    class Meta:
-        fields = '__all__'
+    pass
+    # def __init__(self, *args, **kwargs):
+    #     if kwargs.pop('many', False):
+    #         raise RuntimeError('Sideloadable serializer can not be initiated with \'many=True\'')
+    #     super(SideLoadableSerializer, self).__init__(*args, **kwargs)
+    #
+    #     print(self.fields)
+    #
+    #     for name, field in self.fields.items():
+    #         if not getattr(field, 'many', False):
+    #             raise RuntimeError('SideLoadable field \'%s\' must be set as many=True' % name)
+    #         # if not field.read_only:
+    #         #     raise RuntimeError('SideLoadable field \'%s\' must be set as read_only=True' % name)
+    #         # if not field.allow_null:
+    #         #     raise RuntimeError('SideLoadable field \'%s\' must be set as allow_null=True' % name)
+    #         # if not field.required:
+    #         #     raise RuntimeError('SideLoadable field \'%s\' must be set as required=False' % name)

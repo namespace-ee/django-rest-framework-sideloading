@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from drf_sideloading.relations import SideloadableRelation, SideloadablePrimary
+# from drf_sideloading.relations import SideloadableRelation, SideloadablePrimary
 from drf_sideloading.serializers import SideLoadableSerializer
 from .models import Product, Category, Supplier, Partner
 
@@ -23,11 +23,18 @@ class CategorySerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class ProductSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Product
+        fields = '__all__'
+
+
 class CategorySideloadableSerializer(SideLoadableSerializer):
-    categories = CategorySerializer()
-    products = ProductSerializer(source='products')
-    suppliers = SupplierSerializer(source='products__supplier')
-    partners = PartnerSerializer(source='products__partners')
+    categories = CategorySerializer(many=True)
+    ProductSerializer(many=True)
+    suppliers = SupplierSerializer(source='products__supplier', many=True)
+    partners = PartnerSerializer(source='products__partners', many=True)
 
     class Meta:
         primary = 'categories'
@@ -38,18 +45,11 @@ class CategorySideloadableSerializer(SideLoadableSerializer):
         }
 
 
-class ProductSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = Product
-        fields = '__all__'
-
-
 class ProductSideloadableSerializer(SideLoadableSerializer):
-    products = ProductSerializer(many=True, read_only=True)
-    categories = CategorySerializer(source='category', many=True, read_only=True)
-    suppliers = SupplierSerializer(source='supplier', many=True, read_only=True)
-    partners = PartnerSerializer(source='partners', many=True, read_only=True)
+    products = ProductSerializer(many=True)
+    categories = CategorySerializer(source='category', many=True)
+    suppliers = SupplierSerializer(source='supplier', many=True)
+    partners = PartnerSerializer(many=True)
 
     class Meta:
         primary = 'products'
