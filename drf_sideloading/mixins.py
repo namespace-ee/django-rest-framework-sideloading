@@ -3,22 +3,18 @@ from __future__ import unicode_literals
 from rest_framework.response import Response
 from itertools import chain
 
-from drf_sideloading.fields import SideloadablePrimaryField
 from .serializers import SideLoadableSerializer
 
 
 class SideloadableRelationsMixin(object):
     query_param_name = 'sideload'
     sideloadable_serializer_class = None
-    _sideloadable_serializer = None
     _sideloadable_fields = None
-    _primary_field_name = None
 
     def __init__(self):
-        # check and initiate required fields
-        self._sideloadable_serializer = self.get_sideloadable_serializer_class()
-        self._primary_field_name = self._sideloadable_serializer.get_primary_field_name()
-        self._sideloadable_fields = self._sideloadable_serializer.get_sideloadable_fields()
+        sl_serializer_class = self.get_sideloadable_serializer_class()
+        self._primary_field = sl_serializer_class.Meta.get('primary')
+        self._sideloadable_fields = [x for x in sl_serializer_class.keys() if x != self._primary_field]
 
     def get_sideloadable_serializer_class(self):
         assert self.sideloadable_serializer_class is not None, (
@@ -73,15 +69,19 @@ class SideloadableRelationsMixin(object):
         This function finds string match between requested names and defined relation in view
 
         """
-        self.relations_to_sideload = set(sideload_parameter.split(',')) & set(self._sideloadable_serializer.get_sideloadable_fields().keys())
+        self.relations_to_sideload = set(sideload_parameter.split(',')) & set(self._sideloadable_fields)
         return self.relations_to_sideload
+
+    def get_relevant_prefetches(self):
+        prefetches = self.sideloadable_serializer_class.Meta.get('prefetches', {})
+        return set(chain(prefetches.get(relation, []) for relation in self.relations_to_sideload))
 
     def get_sideloadable_page_from_queryset(self, queryset):
         # this works wonders, but can't be used when page is paginated...
         sideloadable_page = {}
-        sl_fields = self._sideloadable_serializer.fields
+        sl_fields = self.sideloadable_serializer_class.fields
         for relation in self.relations_to_sideload:
-            if isinstance(sl_fields[relation], SideloadablePrimaryField):
+            if relation == self._primary_field:
                 sideloadable_page[relation] = queryset
             else:
                 source = sl_fields[relation].source or relation
@@ -92,18 +92,14 @@ class SideloadableRelationsMixin(object):
 
     def get_sideloadable_page(self, page):
         sideloadable_page = {}
-        sl_fields = self._sideloadable_serializer.fields
+        sl_fields = self.sideloadable_serializer_class.fields
         for relation in self.relations_to_sideload:
-            if isinstance(sl_fields[relation], SideloadablePrimaryField):
+            if relation == self._primary_field:
                 sideloadable_page[relation] = page
             else:
                 source = sl_fields[relation].source or relation
                 sideloadable_page[relation] = self.filter_related_objects(related_objects=page, lookup=source)
         return sideloadable_page
-
-    def get_relevant_prefetches(self):
-        sl_fields = self._sideloadable_serializer.fields
-        return set(chain(sl_fields[relation].get_prefetches() for relation in self.relations_to_sideload))
 
     def filter_related_objects(self, related_objects, lookup):
         current_lookup, remaining_lookup = lookup.split('__', 1) if '__' in lookup else (lookup, None)

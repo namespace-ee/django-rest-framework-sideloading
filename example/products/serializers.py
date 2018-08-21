@@ -23,6 +23,21 @@ class CategorySerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class CategorySideloadableSerializer(SideLoadableSerializer):
+    categories = CategorySerializer()
+    products = ProductSerializer(source='products')
+    suppliers = SupplierSerializer(source='products__supplier')
+    partners = PartnerSerializer(source='products__partners')
+
+    class Meta:
+        primary = 'categories'
+        prefetches = {
+            'products': 'products',
+            'suppliers': 'products__supplier',
+            'partners': 'products__partners',
+        }
+
+
 class ProductSerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -31,12 +46,13 @@ class ProductSerializer(serializers.ModelSerializer):
 
 
 class ProductSideloadableSerializer(SideLoadableSerializer):
-    products = ProductSerializer()
-    categories = CategorySerializer(source='category')
-    suppliers = SupplierSerializer(source='supplier')
-    partners = PartnerSerializer(source='partners')
+    products = ProductSerializer(many=True, read_only=True)
+    categories = CategorySerializer(source='category', many=True, read_only=True)
+    suppliers = SupplierSerializer(source='supplier', many=True, read_only=True)
+    partners = PartnerSerializer(source='partners', many=True, read_only=True)
 
     class Meta:
+        primary = 'products'
         prefetches = {
             'categories': 'category',
             'suppliers': 'supplier',

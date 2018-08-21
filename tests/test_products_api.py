@@ -3,6 +3,7 @@
 
 from __future__ import unicode_literals
 
+from drf_sideloading.serializers import SideLoadableSerializer
 from tests import DJANGO_20
 
 from django.test import TestCase
@@ -46,13 +47,21 @@ class ProductSideloadTestCase(BaseTestCase):
     def setUpClass(cls):
         super(ProductSideloadTestCase, cls).setUpClass()
 
-        sideloadable_relations = {
-            'products': {'primary': True, 'serializer': ProductSerializer},
-            'categories': {'serializer': CategorySerializer, 'source': 'category', 'prefetch': 'category'},
-            'suppliers': {'serializer': SupplierSerializer, 'source': 'supplier', 'prefetch': 'supplier'},
-            'partners': {'serializer': PartnerSerializer, 'source': 'partners', 'prefetch': 'partners'}
-        }
-        ProductViewSet.sideloadable_relations = sideloadable_relations
+        class ProductSideloadableSerializer(SideLoadableSerializer):
+            products = ProductSerializer()
+            categories = CategorySerializer(source='category')
+            suppliers = SupplierSerializer(source='supplier')
+            partners = PartnerSerializer(source='partners')
+
+            class Meta:
+                primary = 'products'
+                prefetches = {
+                    'categories': 'category',
+                    'suppliers': 'supplier',
+                    'partners': 'partners',
+                }
+
+        ProductViewSet.sideloadable_serializer_class = ProductSideloadableSerializer
 
     def test_list(self):
         response = self.client.get(reverse('product-list'), format='json')
@@ -126,14 +135,13 @@ class TestDrfSideloadingNoPrimaryDefined(TestCase):
     def setUpClass(cls):
         super(TestDrfSideloadingNoPrimaryDefined, cls).setUpClass()
 
-        sideloadable_relations = {
-            'product': {'serializer': ProductSerializer},
-            'category': {'serializer': CategorySerializer},
-            'supplier': {'serializer': SupplierSerializer},
-            'partners': {'serializer': PartnerSerializer}
-        }
+        class ProductSideloadableSerializer(SideLoadableSerializer):
+            products = ProductSerializer()
+            categories = CategorySerializer()
+            suppliers = SupplierSerializer()
+            partners = PartnerSerializer()
 
-        ProductViewSet.sideloadable_relations = sideloadable_relations
+        ProductViewSet.sideloadable_serializer_class = ProductSideloadableSerializer
 
     def test_correct_exception_raised(self):
         with self.assertRaises(Exception) as cm:
@@ -152,14 +160,13 @@ class TestDrfSideloadingRelationsNotDictionaries(TestCase):
     def setUpClass(cls):
         super(TestDrfSideloadingRelationsNotDictionaries, cls).setUpClass()
 
-        sideloadable_relations = {
-            'product': ProductSerializer,
-            'category': CategorySerializer,
-            'supplier': SupplierSerializer,
-            'partners': PartnerSerializer
-        }
+        class ProductSideloadableSerializer(SideLoadableSerializer):
+            products = ProductSerializer()
+            categories = CategorySerializer()
+            suppliers = SupplierSerializer()
+            partners = PartnerSerializer()
 
-        ProductViewSet.sideloadable_relations = sideloadable_relations
+        ProductViewSet.sideloadable_serializer_class = ProductSideloadableSerializer
 
     def test_correct_exception_raised(self):
         with self.assertRaises(Exception) as cm:
@@ -198,14 +205,21 @@ class CategorySideloadTestCase(BaseTestCase):
     def setUpClass(cls):
         super(CategorySideloadTestCase, cls).setUpClass()
 
-        sideloadable_relations = {
-            'categories': {'primary': True, 'serializer': CategorySerializer},
-            'products': {'serializer': ProductSerializer, 'source': 'products', 'prefetch': 'products'},
-            'suppliers': {'serializer': SupplierSerializer, 'source': 'products__supplier', 'prefetch': 'products__supplier'},
-            'partners': {'serializer': PartnerSerializer, 'source': 'products__partners', 'prefetch': 'products__partners'}
-        }
+        class CategorySideloadableSerializer(SideLoadableSerializer):
+            categories = CategorySerializer()
+            products = ProductSerializer(source='products')
+            suppliers = SupplierSerializer(source='products__supplier')
+            partners = PartnerSerializer(source='products__partners')
 
-        CategoryViewSet.sideloadable_relations = sideloadable_relations
+            class Meta:
+                primary = 'categories'
+                prefetches = {
+                    'products': 'products',
+                    'suppliers': 'products__supplier',
+                    'partners': 'products__partners',
+                }
+
+        ProductViewSet.sideloadable_serializer_class = CategorySideloadableSerializer
         CategoryViewSet.query_param_name = 's'
 
     def test_sideloading_category_list(self):
