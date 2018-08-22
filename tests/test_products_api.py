@@ -381,4 +381,3 @@ class TestDrfSideloadingValidPrefetches(TestCase):
 
         self.assertEqual(4, len(response.data))
         self.assertEqual(set(expected_relation_names), set(response.data))
-
