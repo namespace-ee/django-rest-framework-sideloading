@@ -10,7 +10,7 @@ from rest_framework.serializers import ListSerializer
 from drf_sideloading.serializers import SideLoadableSerializer
 
 
-class SideloadableRelationsMixin:
+class SideloadableRelationsMixin(object):
     """
     TODO: Implement some protection for too large queries.
         * limit the number of sideloadable elements?

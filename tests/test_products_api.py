@@ -11,9 +11,8 @@ from django.test import TestCase
 from rest_framework import status
 
 from tests.models import Category, Supplier, Product, Partner
-from tests.serializers import ProductSerializer, CategorySerializer, SupplierSerializer, PartnerSerializer, \
-    CategorySideloadableSerializer
-from tests.viewsets import ProductViewSet, CategoryViewSet
+from tests.serializers import ProductSerializer, CategorySerializer, SupplierSerializer, PartnerSerializer
+from tests.viewsets import ProductViewSet
 
 if DJANGO_20:
     from django.urls import reverse
@@ -171,9 +170,9 @@ class CategorySideloadTestCase(BaseTestCase):
         self.assertListEqual(expected_relation_names, list(response.data.keys()))
 
 
-###########################################################
-# Incorrect definitions sideloadable_relations in ViewSet #
-###########################################################
+######################################################################################
+# Incorrect definitions sideloadable_relations in ViewSet and SideloadableSerializer #
+######################################################################################
 class TestDrfSideloadingNoMetaClassDefined(TestCase):
     """Run tests while including mixin but not defining sideloading"""
 
