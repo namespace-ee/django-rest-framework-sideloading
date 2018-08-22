@@ -11,6 +11,16 @@ from drf_sideloading.serializers import SideLoadableSerializer
 
 
 class SideloadableRelationsMixin:
+    """
+    TODO: Implement some protection for too large queries.
+        * limit the number of sideloadable elements?
+            if over limit:
+            - raise error
+            - show warning
+            - paginate, show first page and add a link to remaining paginated list of related elements?
+            - show only the link to paginated list of related elements?
+
+    """
     query_param_name = 'sideload'
     sideloading_serializer_class = None
     _primary_field_name = None
@@ -69,7 +79,8 @@ class SideloadableRelationsMixin:
             return Response(serializer.data)
 
     def parse_query_param(self, sideload_parameter):
-        """ Parse query param and take validated names
+        """
+        Parse query param and take validated names
 
         :param sideload_parameter string
         :return valid relation names list
