@@ -6,17 +6,6 @@ from rest_framework.relations import PKOnlyObject
 
 
 class SideLoadableSerializer(serializers.Serializer):
-    def __init__(self, *args, **kwargs):
-        if kwargs.pop('many', False):
-            raise RuntimeError('Sideloadable serializer can not be initiated with \'many=True\'')
-        super(SideLoadableSerializer, self).__init__(*args, **kwargs)
-
-        if not self.Meta.primary:
-            raise RuntimeError('Sideloadable serializer must have a Meta attribute called primary!')
-
-        for name, field in self.fields.items():
-            if not getattr(field, 'many', False):
-                raise RuntimeError('SideLoadable field \'%s\' must be set as many=True' % name)
 
     def to_representation(self, instance):
         """

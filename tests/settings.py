@@ -3,8 +3,6 @@ from __future__ import unicode_literals, absolute_import
 
 import django
 
-from django.core.management import call_command
-
 
 DEBUG = True
 USE_TZ = True
@@ -26,7 +24,7 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sites',
     'drf_sideloading',
-    'tests'
+    'tests.TestsConfig'
 ]
 
 SITE_ID = 1
@@ -36,5 +34,3 @@ if django.VERSION >= (1, 10):
 else:
     MIDDLEWARE_CLASSES = ()
 
-# apply migrations
-call_command('migrate')

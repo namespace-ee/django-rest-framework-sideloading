@@ -7,22 +7,13 @@ from django.db import models
 class Category(models.Model):
     name = models.CharField(max_length=255)
 
-    class Meta:
-        app_label = 'tests'
-
 
 class Supplier(models.Model):
     name = models.CharField(max_length=255)
 
-    class Meta:
-        app_label = 'tests'
-
 
 class Partner(models.Model):
     name = models.CharField(max_length=255)
-
-    class Meta:
-        app_label = 'tests'
 
 
 class Product(models.Model):
@@ -30,6 +21,3 @@ class Product(models.Model):
     category = models.ForeignKey(Category, related_name='products', on_delete=models.CASCADE)
     supplier = models.ForeignKey(Supplier, related_name='products', on_delete=models.CASCADE)
     partners = models.ManyToManyField(Partner, related_name='products')
-
-    class Meta:
-        app_label = 'tests'
