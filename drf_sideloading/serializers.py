@@ -12,7 +12,7 @@ class SideLoadableSerializer(serializers.Serializer):
         Object instance -> Dict of primitive datatypes.
         """
         ret = OrderedDict()
-        fields = [f for f in self._readable_fields if f.source in instance.keys()]
+        fields = [f for f in self.fields.values() if not f.write_only and f.source in instance.keys()]
 
         for field in fields:
             try:

@@ -1,5 +1,6 @@
 from __future__ import unicode_literals
 
+import six
 import copy
 
 from rest_framework.response import Response
@@ -92,7 +93,7 @@ class SideloadableRelationsMixin(object):
             if v is not None:
                 if isinstance(v, list):
                     cleaned_prefetches[k] = v
-                elif isinstance(v, str):
+                elif isinstance(v, six.string_types):
                     cleaned_prefetches[k] = [v]
                 else:
                     raise RuntimeError('Sideloadable prefetch values must be presented either as a list or a string')
