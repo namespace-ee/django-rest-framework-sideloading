@@ -1,5 +1,7 @@
 from __future__ import unicode_literals
 
+import copy
+
 from rest_framework.response import Response
 from itertools import chain
 
@@ -36,7 +38,7 @@ class SideloadableRelationsMixin:
         return self.sideloading_serializer_class.Meta.primary
 
     def get_sideloadable_fields(self):
-        sideloadable_fields = self.sideloading_serializer_class._declared_fields
+        sideloadable_fields = copy.deepcopy(self.sideloading_serializer_class._declared_fields)
         sideloadable_fields.pop(self._primary_field_name, None)
         return sideloadable_fields
 
@@ -87,11 +89,11 @@ class SideloadableRelationsMixin:
         # this works wonders, but can't be used when page is paginated...
         sideloadable_page = {self._primary_field_name: queryset}
         for relation in self.relations_to_sideload:
+            if not isinstance(self._sideloadable_fields[relation], ListSerializer):
+                raise RuntimeError('SideLoadable field \'%s\' must be set as many=True' % relation)
+
             source = self._sideloadable_fields[relation].source or relation
-            if isinstance(self._sideloadable_fields[relation], ListSerializer):
-                rel_model = self._sideloadable_fields[relation].child.Meta.model
-            else:
-                rel_model = self._sideloadable_fields[relation].Meta.model
+            rel_model = self._sideloadable_fields[relation].child.Meta.model
             rel_qs = rel_model.objects.filter(pk__in=queryset.values_list(source, flat=True))
             sideloadable_page[source] = rel_qs
         return sideloadable_page

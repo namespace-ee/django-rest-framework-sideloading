@@ -32,7 +32,7 @@ class ProductSerializer(serializers.ModelSerializer):
 
 class CategorySideloadableSerializer(SideLoadableSerializer):
     categories = CategorySerializer(many=True)
-    ProductSerializer(many=True)
+    products = ProductSerializer(many=True)
     suppliers = SupplierSerializer(source='products__supplier', many=True)
     partners = PartnerSerializer(source='products__partners', many=True)
 
