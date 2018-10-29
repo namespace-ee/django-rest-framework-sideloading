@@ -1,3 +1,5 @@
-django==2.0
-djangorestframework==3.7.3
+django>=2.1,<2.2
+djangorestframework>=3.9,<3.10
 django-debug-toolbar
+
+git+git://github.com/namespace-ee/django-rest-framework-sideloading.git@dfd822714c7a92b9a783ac4f6105165c90e3916e

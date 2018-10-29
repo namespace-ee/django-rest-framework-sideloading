@@ -3,7 +3,8 @@ wheel
 tox
 codecov
 flake8
-Sphinx
+sphinx
+recommonmark
 
-django==1.11
-djangorestframework
+django>=2.1,<2.2
+djangorestframework>=3.9,<3.10

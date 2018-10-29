@@ -2,14 +2,21 @@ from rest_framework import viewsets
 
 from drf_sideloading.mixins import SideloadableRelationsMixin
 from .models import Product, Category, Supplier, Partner
-from .serializers import ProductSerializer, CategorySerializer, SupplierSerializer, PartnerSerializer, \
-    ProductSideloadableSerializer, CategorySideloadableSerializer
+from .serializers import (
+    ProductSerializer,
+    CategorySerializer,
+    SupplierSerializer,
+    PartnerSerializer,
+    ProductSideloadableSerializer,
+    CategorySideloadableSerializer,
+)
 
 
 class ProductViewSet(SideloadableRelationsMixin, viewsets.ModelViewSet):
     """
     A simple ViewSet for viewing and editing products.
     """
+
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
     sideloading_serializer_class = ProductSideloadableSerializer

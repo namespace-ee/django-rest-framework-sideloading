@@ -20,5 +20,3 @@ python manage.py migrate
 
 #Load data
 python manage.py loaddata products/fixtures/products.json
-
-# do other setups if needed

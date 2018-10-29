@@ -5,10 +5,9 @@
 [![License is MIT](https://img.shields.io/github/license/mashape/apistatus.svg?maxAge=2592000)](https://github.com/namespace-ee/drf-sideloading/blob/master/LICENSE)
 [![Code style Black](https://img.shields.io/badge/code%20style-black-000000.svg?maxAge=2592000)](https://github.com/ambv/black)
 
-# drf-sideloading
+# Django rest framework sideloading
 
-Django Rest Framework extension to provide side-loading of related resources.
-Side-loading allows related resources to be optionally included in a single API response.
+DRF-sideloading is an extension to provide side-loading functionality of related resources. Side-loading allows related resources to be optionally included in a single API response minimizing requests to the API.
 
 ## Documentation
 
@@ -110,7 +109,7 @@ sh scripts/dev.sh
 
 ## Contributing
 
-For detailed description see [CONTRIBUTING Notes](https://github.com/namespace-ee/django-rest-framework-sideloading/blob/master/CONTRIBUTING.rst)
+Contributions are welcome, and they are greatly appreciated! Every little bit helps, and credit will always be given.
 
 #### Setup for contribution
 
@@ -119,7 +118,19 @@ source <YOURVIRTUALENV>/bin/activate
 (myenv) $ pip install -r requirements_dev.txt
 ```
 
-### Test with specific env
+### Test
+
+```shell
+$ make test
+```
+
+#### Run tests with environment matrix
+
+```shell
+$ make tox
+```
+
+#### Run tests with specific environment
 
 ```shell
 $ tox --listenvs
@@ -129,7 +140,7 @@ py27-django19-drf34
 $ tox -e py27-django19-drf34
 ```
 
-Test coverage
+#### Test coverage
 
 ```shell
 $ make coverage
