@@ -109,7 +109,7 @@ sh scripts/dev.sh
 
 ## Contributing
 
-For detailed description see [CONTRIBUTING Notes](https://github.com/namespace-ee/django-rest-framework-sideloading/blob/master/CONTRIBUTING.rst)
+Contributions are welcome, and they are greatly appreciated! Every little bit helps, and credit will always be given.
 
 #### Setup for contribution
 

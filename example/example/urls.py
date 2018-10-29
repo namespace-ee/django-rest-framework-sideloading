@@ -18,23 +18,24 @@ from django.conf.urls import url, include
 from django.contrib import admin
 from rest_framework import routers
 
-from products.views import ProductViewSet, CategoryViewSet, SupplierViewSet, PartnerViewSet
+from products.views import (
+    ProductViewSet,
+    CategoryViewSet,
+    SupplierViewSet,
+    PartnerViewSet,
+)
 
 router = routers.DefaultRouter()
-router.register(r'product', ProductViewSet)
-router.register(r'category', CategoryViewSet)
-router.register(r'supplier', SupplierViewSet)
-router.register(r'partner', PartnerViewSet)
+router.register(r"product", ProductViewSet)
+router.register(r"category", CategoryViewSet)
+router.register(r"supplier", SupplierViewSet)
+router.register(r"partner", PartnerViewSet)
 
 
-urlpatterns = [
-    url(r'^admin/', admin.site.urls),
-    url(r'^', include(router.urls))
-]
+urlpatterns = [url(r"^admin/", admin.site.urls), url(r"^", include(router.urls))]
 
 
 if settings.DEBUG:
     import debug_toolbar
-    urlpatterns = [
-        url(r'^__debug__/', include(debug_toolbar.urls)),
-    ] + urlpatterns
+
+    urlpatterns = [url(r"^__debug__/", include(debug_toolbar.urls))] + urlpatterns
