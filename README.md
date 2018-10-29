@@ -118,7 +118,19 @@ source <YOURVIRTUALENV>/bin/activate
 (myenv) $ pip install -r requirements_dev.txt
 ```
 
-### Test with specific env
+### Test
+
+```shell
+$ make test
+```
+
+#### Run tests with environment matrix
+
+```shell
+$ make tox
+```
+
+#### Run tests with specific environment
 
 ```shell
 $ tox --listenvs
@@ -128,7 +140,7 @@ py27-django19-drf34
 $ tox -e py27-django19-drf34
 ```
 
-Test coverage
+#### Test coverage
 
 ```shell
 $ make coverage
