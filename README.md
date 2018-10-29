@@ -146,6 +146,8 @@ Use [pyenv](https://github.com/pyenv/pyenv) for testing using different python v
 
 ## License
 
+[MIT](https://github.com/namespace-ee/drf-sideloading/blob/master/LICENSE)
+
 ## Credits
 
 - [Demur Nodia](https://github.com/demonno)
