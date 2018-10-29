@@ -1,26 +1,14 @@
-.. image:: https://badge.fury.io/py/drf-sideloading.svg
-:target: https://badge.fury.io/py/drf-sideloading
-:alt: Package Index
+[![Package Index](https://badge.fury.io/py/drf-sideloading.svg)](https://badge.fury.io/py/drf-sideloading)
 
-.. image:: https://travis-ci.org/namespace-ee/django-rest-framework-sideloading.svg?branch=master
-:target: https://travis-ci.org/namespace-ee/django-rest-framework-sideloading
-:alt: Build Status
+[![Build Status](https://travis-ci.org/namespace-ee/django-rest-framework-sideloading.svg?branch=master)](https://travis-ci.org/namespace-ee/django-rest-framework-sideloading)
 
-.. image:: https://codecov.io/gh/namespace-ee/django-rest-framework-sideloading/branch/master/graph/badge.svg
-:target: https://codecov.io/gh/namespace-ee/django-rest-framework-sideloading
-:alt: Code Coverage
+[![Code Coverage](https://codecov.io/gh/namespace-ee/django-rest-framework-sideloading/branch/master/graph/badge.svg)](https://codecov.io/gh/namespace-ee/django-rest-framework-sideloading)
 
-.. image:: https://readthedocs.org/projects/drf-sideloading/badge/?version=latest
-:target: http://drf-sideloading.readthedocs.io/en/latest/?badge=latest
-:alt: Documentation Status
+[![Documentation Status](https://readthedocs.org/projects/drf-sideloading/badge/?version=latest)](http://drf-sideloading.readthedocs.io/en/latest/?badge=latest)
 
-.. image:: https://img.shields.io/github/license/mashape/apistatus.svg?maxAge=2592000
-:alt: License is MIT
-:target: https://github.com/namespace-ee/drf-sideloading/blob/master/LICENSE
+[![License is MIT](https://img.shields.io/github/license/mashape/apistatus.svg?maxAge=2592000)](https://github.com/namespace-ee/drf-sideloading/blob/master/LICENSE)
 
-.. image:: image:: https://img.shields.io/badge/code%20style-black-000000.svg
-:alt: Code style Black
-:target: https://github.com/ambv/black
+[![Code style Black](https://img.shields.io/badge/code%20style-black-000000.svg?maxAge=2592000)](https://github.com/ambv/black)
 
 # drf-sideloading
 
