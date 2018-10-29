@@ -6,13 +6,16 @@ from rest_framework.relations import PKOnlyObject
 
 
 class SideLoadableSerializer(serializers.Serializer):
-
     def to_representation(self, instance):
         """
         Object instance -> Dict of primitive datatypes.
         """
         ret = OrderedDict()
-        fields = [f for f in self.fields.values() if not f.write_only and f.source in instance.keys()]
+        fields = [
+            f
+            for f in self.fields.values()
+            if not f.write_only and f.source in instance.keys()
+        ]
 
         for field in fields:
             try:
@@ -25,7 +28,9 @@ class SideLoadableSerializer(serializers.Serializer):
             #
             # For related fields with `use_pk_only_optimization` we need to
             # resolve the pk value.
-            check_for_none = attribute.pk if isinstance(attribute, PKOnlyObject) else attribute
+            check_for_none = (
+                attribute.pk if isinstance(attribute, PKOnlyObject) else attribute
+            )
             if check_for_none is None:
                 ret[field.field_name] = None
             else:
