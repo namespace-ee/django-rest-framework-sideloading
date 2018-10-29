@@ -3,7 +3,6 @@
 [![Code Coverage](https://codecov.io/gh/namespace-ee/django-rest-framework-sideloading/branch/master/graph/badge.svg)](https://codecov.io/gh/namespace-ee/django-rest-framework-sideloading)
 [![Documentation Status](https://readthedocs.org/projects/drf-sideloading/badge/?version=latest)](http://drf-sideloading.readthedocs.io/en/latest/?badge=latest)
 [![License is MIT](https://img.shields.io/github/license/mashape/apistatus.svg?maxAge=2592000)](https://github.com/namespace-ee/drf-sideloading/blob/master/LICENSE)
-
 [![Code style Black](https://img.shields.io/badge/code%20style-black-000000.svg?maxAge=2592000)](https://github.com/ambv/black)
 
 # drf-sideloading
