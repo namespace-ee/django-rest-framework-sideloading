@@ -5,10 +5,9 @@
 [![License is MIT](https://img.shields.io/github/license/mashape/apistatus.svg?maxAge=2592000)](https://github.com/namespace-ee/drf-sideloading/blob/master/LICENSE)
 [![Code style Black](https://img.shields.io/badge/code%20style-black-000000.svg?maxAge=2592000)](https://github.com/ambv/black)
 
-# drf-sideloading
+# Django rest framework sideloading
 
-Django Rest Framework extension to provide side-loading of related resources.
-Side-loading allows related resources to be optionally included in a single API response.
+DRF-sideloading is an extension to provide side-loading functionality of related resources. Side-loading allows related resources to be optionally included in a single API response minimizing requests to the API.
 
 ## Documentation
 
