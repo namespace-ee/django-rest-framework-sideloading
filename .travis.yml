@@ -13,8 +13,6 @@ matrix:
   include:
     - python: 3.6
       env: TOXENV=lint
-    - python: 3.6
-      env: TOXENV=docs
 
 # command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
 install:
