@@ -9,10 +9,6 @@
 
 DRF-sideloading is an extension to provide side-loading functionality of related resources. Side-loading allows related resources to be optionally included in a single API response minimizing requests to the API.
 
-## Documentation
-
-The full documentation is at https://drf-sideloading.readthedocs.io.
-
 ## Quickstart
 
 1. Install drf-sideloading:
