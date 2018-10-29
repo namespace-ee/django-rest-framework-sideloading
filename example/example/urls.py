@@ -18,12 +18,7 @@ from django.conf.urls import url, include
 from django.contrib import admin
 from rest_framework import routers
 
-from products.views import (
-    ProductViewSet,
-    CategoryViewSet,
-    SupplierViewSet,
-    PartnerViewSet
-)
+from products.views import ProductViewSet, CategoryViewSet, SupplierViewSet, PartnerViewSet
 
 router = routers.DefaultRouter()
 router.register(r'product', ProductViewSet)

@@ -3,6 +3,8 @@
 
 from __future__ import unicode_literals
 
+
+from drf_sideloading.serializers import SideLoadableSerializer
 from tests import DJANGO_20
 
 from django.test import TestCase
@@ -10,7 +12,7 @@ from rest_framework import status
 
 from tests.models import Category, Supplier, Product, Partner
 from tests.serializers import ProductSerializer, CategorySerializer, SupplierSerializer, PartnerSerializer
-from tests.viewsets import ProductViewSet, CategoryViewSet
+from tests.viewsets import ProductViewSet
 
 if DJANGO_20:
     from django.urls import reverse
@@ -46,13 +48,21 @@ class ProductSideloadTestCase(BaseTestCase):
     def setUpClass(cls):
         super(ProductSideloadTestCase, cls).setUpClass()
 
-        sideloadable_relations = {
-            'products': {'primary': True, 'serializer': ProductSerializer},
-            'categories': {'serializer': CategorySerializer, 'source': 'category', 'prefetch': 'category'},
-            'suppliers': {'serializer': SupplierSerializer, 'source': 'supplier', 'prefetch': 'supplier'},
-            'partners': {'serializer': PartnerSerializer, 'source': 'partners', 'prefetch': 'partners'}
-        }
-        ProductViewSet.sideloadable_relations = sideloadable_relations
+        class ProductSideloadableSerializer(SideLoadableSerializer):
+            products = ProductSerializer(many=True)
+            categories = CategorySerializer(source='category', many=True)
+            suppliers = SupplierSerializer(source='supplier', many=True)
+            partners = PartnerSerializer(many=True)
+
+            class Meta:
+                primary = 'products'
+                prefetches = {
+                    'categories': 'category',
+                    'suppliers': 'supplier',
+                    'partners': 'partners',
+                }
+
+        ProductViewSet.sideloading_serializer_class = ProductSideloadableSerializer
 
     def test_list(self):
         response = self.client.get(reverse('product-list'), format='json')
@@ -69,6 +79,16 @@ class ProductSideloadTestCase(BaseTestCase):
         expected_relation_names = ['products', 'categories', 'suppliers', 'partners']
 
         self.assertEqual(4, len(response.data))
+        self.assertEqual(set(expected_relation_names), set(response.data))
+
+    def test_list_partial_sideloading(self):
+        """Test sideloading for all defined relations"""
+        response = self.client.get(reverse('product-list'), {'sideload': 'suppliers,partners'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        expected_relation_names = ['products', 'suppliers', 'partners']
+
+        self.assertEqual(3, len(response.data))
         self.assertEqual(set(expected_relation_names), set(response.data))
 
     # all negative test cases below only here
@@ -116,9 +136,68 @@ class ProductSideloadTestCase(BaseTestCase):
         self.assertEqual(set(expected_relation_names), set(response.data))
 
 
-###########################################################
-# Incorrect definitions sideloadable_relations in ViewSet #
-###########################################################
+###################################
+# Different Correct usages of API #
+###################################
+class CategorySideloadTestCase(BaseTestCase):
+
+    def test_list(self):
+        response = self.client.get(reverse('category-list'), format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.assertEqual(1, len(response.data))
+        self.assertEqual('Category', response.data[0]['name'])
+
+    def test_list_sideloading_with_reverse_relations_and_its_relations(self):
+        """Test sideloading for all defined relations"""
+        response = self.client.get(reverse('category-list'), {'sideload': 'products,suppliers,partners'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        expected_relation_names = ['categories', 'products', 'suppliers', 'partners']
+
+        self.assertEqual(4, len(response.data))
+        self.assertListEqual(expected_relation_names, list(response.data.keys()))
+
+    def test_list_sideloading_with_reverse_relations_relations_without_the_reverse_relation_itself(self):
+        """Test sideloading for related items to products, that are related to the categories
+        while the products list itself is not sideloaded"""
+        response = self.client.get(reverse('category-list'), {'sideload': 'suppliers,partners'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        expected_relation_names = ['categories', 'suppliers', 'partners']
+
+        self.assertEqual(3, len(response.data))
+        self.assertListEqual(expected_relation_names, list(response.data.keys()))
+
+
+######################################################################################
+# Incorrect definitions sideloadable_relations in ViewSet and SideloadableSerializer #
+######################################################################################
+class TestDrfSideloadingNoMetaClassDefined(TestCase):
+    """Run tests while including mixin but not defining sideloading"""
+
+    @classmethod
+    def setUpClass(cls):
+        super(TestDrfSideloadingNoMetaClassDefined, cls).setUpClass()
+
+        class ProductSideloadableSerializer(SideLoadableSerializer):
+            products = ProductSerializer(many=True)
+            categories = CategorySerializer(many=True)
+            suppliers = SupplierSerializer(many=True)
+            partners = PartnerSerializer(many=True)
+
+        ProductViewSet.sideloading_serializer_class = ProductSideloadableSerializer
+
+    def test_correct_exception_raised(self):
+        with self.assertRaises(AssertionError) as cm:
+            self.client.get(reverse('product-list'), data={'sideload': 'categories,suppliers,partners'}, format='json')
+
+        expected_error_message = "Sideloadable serializer must have a Meta class defined with the 'primary' field name!"
+
+        raised_exception = cm.exception
+        self.assertEqual(str(raised_exception), expected_error_message)
+
+
 class TestDrfSideloadingNoPrimaryDefined(TestCase):
     """Run tests while including mixin but not defining sideloading"""
 
@@ -126,91 +205,176 @@ class TestDrfSideloadingNoPrimaryDefined(TestCase):
     def setUpClass(cls):
         super(TestDrfSideloadingNoPrimaryDefined, cls).setUpClass()
 
-        sideloadable_relations = {
-            'product': {'serializer': ProductSerializer},
-            'category': {'serializer': CategorySerializer},
-            'supplier': {'serializer': SupplierSerializer},
-            'partners': {'serializer': PartnerSerializer}
-        }
+        class ProductSideloadableSerializer(SideLoadableSerializer):
+            products = ProductSerializer(many=True)
+            categories = CategorySerializer(many=True)
+            suppliers = SupplierSerializer(many=True)
+            partners = PartnerSerializer(many=True)
 
-        ProductViewSet.sideloadable_relations = sideloadable_relations
+            class Meta:
+                pass
+
+        ProductViewSet.sideloading_serializer_class = ProductSideloadableSerializer
 
     def test_correct_exception_raised(self):
-        with self.assertRaises(Exception) as cm:
-            self.client.get(reverse('product-list'), format='json')
+        with self.assertRaises(AssertionError) as cm:
+            self.client.get(reverse('product-list'), data={'sideload': 'categories,suppliers,partners'}, format='json')
 
-        expected_error_message = "It is required to define primary model {'primary': True, ...}"
+        expected_error_message = "Sideloadable serializer must have a Meta attribute called primary!"
 
         raised_exception = cm.exception
         self.assertEqual(str(raised_exception), expected_error_message)
 
 
-class TestDrfSideloadingRelationsNotDictionaries(TestCase):
+class TestDrfSideloadingRelationsNotListSerializers(TestCase):
     """Run tests while including mixin but not defining sideloading"""
 
     @classmethod
     def setUpClass(cls):
-        super(TestDrfSideloadingRelationsNotDictionaries, cls).setUpClass()
+        super(TestDrfSideloadingRelationsNotListSerializers, cls).setUpClass()
 
-        sideloadable_relations = {
-            'product': ProductSerializer,
-            'category': CategorySerializer,
-            'supplier': SupplierSerializer,
-            'partners': PartnerSerializer
-        }
+        class ProductSideloadableSerializer(SideLoadableSerializer):
+            products = ProductSerializer(many=True)
+            categories = CategorySerializer()
+            suppliers = SupplierSerializer()
+            partners = PartnerSerializer(many=True)
 
-        ProductViewSet.sideloadable_relations = sideloadable_relations
+            class Meta:
+                primary = 'products'
+
+        ProductViewSet.sideloading_serializer_class = ProductSideloadableSerializer
 
     def test_correct_exception_raised(self):
-        with self.assertRaises(Exception) as cm:
-            self.client.get(reverse('product-list'), format='json')
+        with self.assertRaises(AssertionError) as cm:
+            self.client.get(reverse('product-list'), data={'sideload': 'categories,suppliers,partners'})
 
-        expected_error_message = "All sideloadable relations must be defined as dictionaries"
+        expected_error_message = "SideLoadable field 'categories' must be set as many=True"
 
         raised_exception = cm.exception
         self.assertEqual(str(raised_exception), expected_error_message)
 
 
-class TestDrfSideloadingNoPrimaryIndicated(TestCase):
+class TestDrfSideloadingInvalidPrimary(TestCase):
     """Run tests while including mixin but not defining sideloading"""
 
     @classmethod
     def setUpClass(cls):
-        super(TestDrfSideloadingNoPrimaryIndicated, cls).setUpClass()
-        delattr(ProductViewSet, "sideloadable_relations")
+        super(TestDrfSideloadingInvalidPrimary, cls).setUpClass()
+
+        class ProductSideloadableSerializer(SideLoadableSerializer):
+            products = ProductSerializer(many=True)
+            categories = CategorySerializer(many=True)
+            suppliers = SupplierSerializer(many=True)
+            partners = PartnerSerializer(many=True)
+
+            class Meta:
+                primary = 'other'
+
+        ProductViewSet.sideloading_serializer_class = ProductSideloadableSerializer
 
     def test_correct_exception_raised(self):
-        with self.assertRaises(Exception) as cm:
-            self.client.get(reverse('product-list'), format='json')
+        with self.assertRaises(AssertionError) as cm:
+            self.client.get(reverse('product-list'), data={'sideload': 'categories,suppliers,partners'}, format='json')
 
-        expected_error_message = "define `sideloadable_relations` class variable, while using `SideloadableRelationsMixin`"
+        expected_error_message = "Sideloadable serializer Meta.primary must point to a field in the serializer!"
 
         raised_exception = cm.exception
         self.assertEqual(str(raised_exception), expected_error_message)
 
 
-##############################
-# TODO Move to separate file #
-##############################
-class CategorySideloadTestCase(BaseTestCase):
+class TestDrfSideloadingInvalidPrefetchesType(TestCase):
+    """Run tests while including mixin but not defining sideloading"""
 
     @classmethod
     def setUpClass(cls):
-        super(CategorySideloadTestCase, cls).setUpClass()
+        super(TestDrfSideloadingInvalidPrefetchesType, cls).setUpClass()
 
-        sideloadable_relations = {
-            'categories': {'primary': True, 'serializer': CategorySerializer},
-            'products': {'serializer': ProductSerializer, 'source': 'products', 'prefetch': 'products'},
-            'suppliers': {'serializer': SupplierSerializer, 'source': 'products__supplier', 'prefetch': 'products__supplier'},
-            'partners': {'serializer': PartnerSerializer, 'source': 'products__partners', 'prefetch': 'products__partners'}
-        }
+        class ProductSideloadableSerializer(SideLoadableSerializer):
+            products = ProductSerializer(many=True)
+            categories = CategorySerializer(many=True)
+            suppliers = SupplierSerializer(many=True)
+            partners = PartnerSerializer(many=True)
 
-        CategoryViewSet.sideloadable_relations = sideloadable_relations
-        CategoryViewSet.query_param_name = 's'
+            class Meta:
+                primary = 'products'
+                prefetches = (
+                    ('categories', 'category'),
+                    ('suppliers', 'supplier'),
+                    ('partners', 'partners'),
+                )
 
-    def test_sideloading_category_list(self):
-        """Test sideloading for all defined relations"""
-        response = self.client.get(reverse('category-list'), {'s': 'products,suppliers,partners'})
+        ProductViewSet.sideloading_serializer_class = ProductSideloadableSerializer
+
+    def test_correct_exception_raised(self):
+        with self.assertRaises(AssertionError) as cm:
+            self.client.get(reverse('product-list'), data={'sideload': 'categories,suppliers,partners'}, format='json')
+
+        expected_error_message = "Sideloadable serializer Meta attribute 'prefetches' must be a dict."
+
+        raised_exception = cm.exception
+        self.assertEqual(str(raised_exception), expected_error_message)
+
+
+class TestDrfSideloadingInvalidPrefetchesValuesType(TestCase):
+    """Run tests while including mixin but not defining sideloading"""
+
+    @classmethod
+    def setUpClass(cls):
+        super(TestDrfSideloadingInvalidPrefetchesValuesType, cls).setUpClass()
+
+        class ProductSideloadableSerializer(SideLoadableSerializer):
+            products = ProductSerializer(many=True)
+            categories = CategorySerializer(many=True)
+            suppliers = SupplierSerializer(many=True)
+            partners = PartnerSerializer(many=True)
+
+            class Meta:
+                primary = 'products'
+                prefetches = {
+                    'categories': 'category',
+                    'suppliers': ['supplier'],
+                    'partners': 123,
+                }
+
+        ProductViewSet.sideloading_serializer_class = ProductSideloadableSerializer
+
+    def test_correct_exception_raised(self):
+        with self.assertRaises(RuntimeError) as cm:
+            self.client.get(reverse('product-list'), data={'sideload': 'categories,suppliers,partners'}, format='json')
+
+        expected_error_message = "Sideloadable prefetch values must be presented either as a list or a string"
+
+        raised_exception = cm.exception
+        self.assertEqual(str(raised_exception), expected_error_message)
+
+
+class TestDrfSideloadingValidPrefetches(TestCase):
+    """Run tests while including mixin but not defining sideloading"""
+
+    @classmethod
+    def setUpClass(cls):
+        super(TestDrfSideloadingValidPrefetches, cls).setUpClass()
+
+        class ProductSideloadableSerializer(SideLoadableSerializer):
+            products = ProductSerializer(many=True)
+            categories = CategorySerializer(source='category', many=True)
+            suppliers = SupplierSerializer(source='supplier', many=True)
+            partners = PartnerSerializer(many=True)
+
+            class Meta:
+                primary = 'products'
+                prefetches = {
+                    'categories': 'category',
+                    'suppliers': ['supplier'],
+                    'partners': None,
+                }
+
+        ProductViewSet.sideloading_serializer_class = ProductSideloadableSerializer
+
+    def test_sideloading_with_prefetches(self):
+        self.client.get(reverse('product-list'), data={'sideload': 'categories,suppliers,partners'}, format='json')
+
+        response = self.client.get(reverse('product-list'), {'sideload': 'categories,suppliers,partners'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         expected_relation_names = ['products', 'categories', 'suppliers', 'partners']

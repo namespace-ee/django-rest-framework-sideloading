@@ -3,6 +3,7 @@ from __future__ import unicode_literals, absolute_import
 
 import django
 
+
 DEBUG = True
 USE_TZ = True
 
@@ -23,7 +24,7 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sites',
     'drf_sideloading',
-    'tests'
+    'tests.TestsConfig'
 ]
 
 SITE_ID = 1
