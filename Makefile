@@ -54,4 +54,4 @@ sdist: clean ## package
 	ls -l dist
 
 bump: ## bump next version + by 0.0.1 patch
-	bumpversion major
+	bumpversion patch
