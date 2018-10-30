@@ -54,7 +54,7 @@ MIDDLEWARE = [
     # 'debug_toolbar.middleware.DebugToolbarMiddleware',
 ]
 
-ROOT_URLCONF = "example.urls"
+ROOT_URLCONF = "urls"
 
 TEMPLATES = [
     {

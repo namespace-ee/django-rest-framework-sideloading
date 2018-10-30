@@ -26,10 +26,10 @@ from products.views import (
 )
 
 router = routers.DefaultRouter()
-router.register(r"product", ProductViewSet)
-router.register(r"category", CategoryViewSet)
-router.register(r"supplier", SupplierViewSet)
-router.register(r"partner", PartnerViewSet)
+router.register(r"products", ProductViewSet)
+router.register(r"categorys", CategoryViewSet)
+router.register(r"suppliers", SupplierViewSet)
+router.register(r"partners", PartnerViewSet)
 
 
 urlpatterns = [url(r"^admin/", admin.site.urls), url(r"^", include(router.urls))]

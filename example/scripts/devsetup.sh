@@ -2,21 +2,20 @@
 
 set -e
 
-## Python setup
-# create venv if not there (use venv)
+# Create venv if not there (use venv)
 python3 -m venv --prompt "${PROJECT_NAME}" .env
-# activate it
+
+# Activate virtualenv
 source ./.env/bin/activate
 
-# Automate one of the ways of using library in example project
-# export PYTHONPATH=$PYTHONPATH:$(cd .. && pwd)
-# pip install drf-sideloading
+# Add drf-sideloading library to PYTHONPATH
+export PYTHONPATH=$PYTHONPATH:$(cd .. && pwd)
 
-# install requirements
+# Install requirements
 pip install -r requirements.txt
 
-# migrate
+# Run migrate
 python manage.py migrate
 
-#Load data
+# Load example data from fixtures
 python manage.py loaddata products/fixtures/products.json
