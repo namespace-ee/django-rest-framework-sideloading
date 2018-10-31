@@ -49,6 +49,7 @@ setup(
     version=version,
     description="""Extension for Django Rest Framework to enable simple sideloading""",
     long_description=readme + "\n\n" + history,
+    long_description_content_type="text/markdown",
     author="Demur Nodia",
     author_email="demur@namespace.ee",
     url="https://github.com/namespace-ee/drf-sideloading",

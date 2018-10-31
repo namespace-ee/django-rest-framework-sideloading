@@ -1,9 +1,10 @@
 bumpversion==0.5.3
-wheel
-tox
 codecov
 flake8
 sphinx
+tox
+twine
+wheel
 recommonmark
 
 django>=2.1,<2.2
