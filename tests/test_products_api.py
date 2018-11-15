@@ -7,7 +7,7 @@ from drf_sideloading.serializers import SideLoadableSerializer
 from tests import DJANGO_20
 
 from django.test import TestCase
-from rest_framework import status
+from rest_framework import status, serializers
 
 from tests.models import Category, Supplier, Product, Partner
 from tests.serializers import (
@@ -438,35 +438,33 @@ class TestDrfSideloadingValidPrefetches(TestCase):
         self.assertEqual(set(expected_relation_names), set(response.data))
 
 
-class ProductSideloadDuplicationTestCase(BaseTestCase):
+class ProductSideloadSameSourceDuplicationTestCase(BaseTestCase):
     @classmethod
     def setUpClass(cls):
-        super(ProductSideloadDuplicationTestCase, cls).setUpClass()
+        super(ProductSideloadSameSourceDuplicationTestCase, cls).setUpClass()
+
+        class OldCategorySerializer(serializers.ModelSerializer):
+            old_name = serializers.CharField(source='name')
+
+            class Meta:
+                model = Category
+                fields = ["old_name"]
 
         class ProductSideloadableSerializer(SideLoadableSerializer):
             products = ProductSerializer(many=True)
-            category = CategorySerializer(many=True)
             categories = CategorySerializer(source="category", many=True)
+            old_categories = OldCategorySerializer(source="category", many=True)
+            suppliers = SupplierSerializer(source="supplier", many=True)
+            partners = PartnerSerializer(many=True)
 
             class Meta:
                 primary = "products"
                 prefetches = {
                     "category": "category",
-                    "categories": "category",
+                    "old_categories": "category",
                 }
 
         ProductViewSet.sideloading_serializer_class = ProductSideloadableSerializer
-
-    def test_list_sideload_category(self):
-        response = self.client.get(
-            reverse("product-list"), {"sideload": "category"}
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        expected_relation_names = ["products", "category"]
-
-        self.assertEqual(2, len(response.data))
-        self.assertEqual(set(expected_relation_names), set(response.data))
 
     def test_list_sideload_categories(self):
         response = self.client.get(
@@ -476,5 +474,36 @@ class ProductSideloadDuplicationTestCase(BaseTestCase):
 
         expected_relation_names = ["products", "categories"]
 
-        self.assertEqual(2, len(response.data))
-        self.assertEqual(set(expected_relation_names), set(response.data))
+        self.assertSetEqual(
+            set(response.data.serializer.instance.keys()),
+            {"products", "category"}
+        )
+        self.assertSetEqual(set(dict(response.data).keys()), set(expected_relation_names))
+
+    def test_list_sideload_old_categories(self):
+        response = self.client.get(
+            reverse("product-list"), {"sideload": "old_categories"}
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        expected_relation_names = ["products", "old_categories"]
+
+        self.assertSetEqual(
+            set(response.data.serializer.instance.keys()),
+            {"products", "category"}
+        )
+        self.assertSetEqual(set(dict(response.data).keys()), set(expected_relation_names))
+
+    def test_list_sideload_new_categories_and_old_categories(self):
+        response = self.client.get(
+            reverse("product-list"), {"sideload": "categories,old_categories"}
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        expected_relation_names = ["products", "categories", "old_categories"]
+
+        self.assertSetEqual(
+            set(response.data.serializer.instance.keys()),
+            {"products", "category"}
+        )
+        self.assertSetEqual(set(dict(response.data).keys()), set(expected_relation_names))
