@@ -18,9 +18,9 @@ class SideLoadableSerializer(serializers.Serializer):
         fields = [
             f
             for f in self.fields.values()
-            if not f.write_only
-               and f.source in instance.keys()
-               and f.field_name in self.fields_to_load
+            if (not f.write_only
+                and f.source in instance.keys()
+                and f.field_name in self.fields_to_load)
         ]
 
         for field in fields:
