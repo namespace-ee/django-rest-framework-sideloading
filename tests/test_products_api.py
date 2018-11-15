@@ -3,8 +3,8 @@
 
 from __future__ import unicode_literals
 
-from rest_framework.permissions import BasePermission, SAFE_METHODS
-from rest_framework.renderers import JSONRenderer, BrowsableAPIRenderer
+from rest_framework.permissions import BasePermission
+from rest_framework.renderers import BrowsableAPIRenderer
 from rest_framework.settings import api_settings
 
 from drf_sideloading.serializers import SideLoadableSerializer
