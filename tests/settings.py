@@ -17,10 +17,14 @@ ROOT_URLCONF = "tests.urls"
 INSTALLED_APPS = [
     "django.contrib.auth",
     "django.contrib.contenttypes",
+    "django.contrib.staticfiles",
     "django.contrib.sites",
+    "rest_framework",
     "drf_sideloading",
     "tests.TestsConfig",
 ]
+
+STATIC_URL = "/static/"
 
 SITE_ID = 1
 
