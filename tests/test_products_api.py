@@ -503,3 +503,26 @@ class TestDrfSideloadingBrowsableApiPermissions(TestCase):
 
         self.assertEqual(4, len(response.data))
         self.assertEqual(set(expected_relation_names), set(response.data))
+
+    def test_sideloading_allow_post_without_sideloading(self):
+        category = Category.objects.first()
+        supplier = Supplier.objects.first()
+        response = self.client.post(
+            reverse("product-list"),
+            data={"name": "Random product", "category": category.id, "supplier": supplier.id},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+    
+    def test_sideloading_allow_post_with_sideloading(self):
+        response = self.client.post(
+            '{}{}'.format(reverse("product-list"), '?sideload=categories,suppliers,partners'),
+            data={"name": "Random product"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        expected_relation_names = ["products", "categories", "suppliers", "partners"]
+
+        self.assertEqual(4, len(response.data))
+        self.assertEqual(set(expected_relation_names), set(response.data))

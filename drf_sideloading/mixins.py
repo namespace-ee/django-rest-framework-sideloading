@@ -12,17 +12,6 @@ from drf_sideloading.serializers import SideLoadableSerializer
 
 
 class SideloadableRelationsMixin(object):
-    """
-    TODO: Implement some protection for too large queries.
-        * limit the number of sideloadable elements?
-            if over limit:
-            - raise error
-            - show warning
-            - paginate, show first page and add a link to remaining paginated list of related elements?
-            - show only the link to paginated list of related elements?
-
-    """
-
     query_param_name = "sideload"
     sideloading_serializer_class = None
     _primary_field_name = None
@@ -119,15 +108,14 @@ class SideloadableRelationsMixin(object):
                 request, *args, **kwargs
             )
 
-        # disable 'post', 'put', 'patch', 'delete' and 'options' methods.
-        # this also disables the forms in BrowsableAPIRenderer
+        # Disable 'post', 'put', 'patch', and 'delete' methods when sideloading
         self.http_method_names = list(
-            set(self.http_method_names) - {'post', 'put', 'patch', 'delete', 'options'}
+            set(self.http_method_names) - {'post', 'put', 'patch', 'delete'}
         )
         # After this `relations_to_sideload` is safe to use
         queryset = self.get_queryset()
 
-        # add prefetches if applicable
+        # Add prefetches if applicable
         prefetch_relations = self.get_relevant_prefetches()
         if prefetch_relations:
             queryset = queryset.prefetch_related(*prefetch_relations)
@@ -224,6 +212,7 @@ class SideloadableRelationsMixin(object):
             return self.filter_related_objects(related_objects_set, remaining_lookup)
         return set(related_objects_set) - {"", None}
 
+    """
     def create(self, *args, **kwargs):
         raise RuntimeError("Method 'create' can not be called while sideloading")
 
@@ -250,3 +239,4 @@ class SideloadableRelationsMixin(object):
 
     def perform_destroy(self, *args, **kwargs):
         raise RuntimeError("Method 'perform_destroy' can not be called while sideloading")
+    """
