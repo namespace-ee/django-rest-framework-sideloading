@@ -495,7 +495,6 @@ class TestDrfSideloadingBrowsableApiPermissions(TestCase):
         response = self.client.get(
             reverse("product-list"),
             data={"sideload": "categories,suppliers,partners"},
-            # format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
