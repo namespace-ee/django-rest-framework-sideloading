@@ -71,6 +71,29 @@ class SideloadableRelationsMixin(object):
                 field, "many", None
             ), "SideLoadable field '{}' must be set as many=True".format(name)
 
+    def get_context(self, *args, **kwargs):
+        context = super().get_context(*args, **kwargs)
+        context['display_edit_forms'] = False
+        return context
+
+    def show_form_for_method(self, view, method, request, obj):
+        sideload_params = self.parse_query_param(
+            sideload_parameter=request.query_params.get(self.query_param_name, "")
+        )
+        if sideload_params:
+            return False
+        else:
+            return super().show_form_for_method(view=view, method=method, request=request, obj=obj)
+
+    def get_rendered_html_form(self, data, view, method, request):
+        sideload_params = self.parse_query_param(
+            sideload_parameter=request.query_params.get(self.query_param_name, "")
+        )
+        if sideload_params:
+            return ""
+        else:
+            return super().get_rendered_html_form(data=data, view=view, method=method, request=request)
+
     def get_primary_field_name(self):
         return self.sideloading_serializer_class.Meta.primary
 
@@ -108,10 +131,6 @@ class SideloadableRelationsMixin(object):
                 request, *args, **kwargs
             )
 
-        # Disable 'post', 'put', 'patch', and 'delete' methods when sideloading
-        self.http_method_names = list(
-            set(self.http_method_names) - {'post', 'put', 'patch', 'delete'}
-        )
         # After this `relations_to_sideload` is safe to use
         queryset = self.get_queryset()
 
@@ -215,32 +234,3 @@ class SideloadableRelationsMixin(object):
         if remaining_lookup:
             return self.filter_related_objects(related_objects_set, remaining_lookup)
         return set(related_objects_set) - {"", None}
-
-    """
-    def create(self, *args, **kwargs):
-        raise RuntimeError("Method 'create' can not be called while sideloading")
-
-    def perform_create(self, *args, **kwargs):
-        raise RuntimeError("Method 'perform_create' can not be called while sideloading")
-
-    def get_success_headers(self, *args, **kwargs):
-        raise RuntimeError("Method 'get_success_headers' can not be called while sideloading")
-
-    def retrieve(self, *args, **kwargs):
-        raise RuntimeError("Method 'retrieve' can not be called while sideloading")
-
-    def update(self, *args, **kwargs):
-        raise RuntimeError("Method 'update' can not be called while sideloading")
-
-    def perform_update(self, *args, **kwargs):
-        raise RuntimeError("Method 'perform_update' can not be called while sideloading")
-
-    def partial_update(self, *args, **kwargs):
-        raise RuntimeError("Method 'partial_update' can not be called while sideloading")
-
-    def destroy(self, *args, **kwargs):
-        raise RuntimeError("Method 'destroy' can not be called while sideloading")
-
-    def perform_destroy(self, *args, **kwargs):
-        raise RuntimeError("Method 'perform_destroy' can not be called while sideloading")
-    """

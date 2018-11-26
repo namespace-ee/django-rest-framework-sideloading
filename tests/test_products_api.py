@@ -484,14 +484,6 @@ class TestDrfSideloadingBrowsableApiPermissions(TestCase):
         super(TestDrfSideloadingBrowsableApiPermissions, cls).tearDownClass()
 
     def test_sideloading_does_not_render_forms_and_check_object_permissions(self):
-        # browsableAPIRenderer decides, if its a DETAIL view in serializer is many=True
-        # if not, and instance exists, it checks the permissions for the instance
-        # and renders the forms.
-
-        # This should not happen when sideloading is used.
-        # sideloading initiated the serializer as an instance not many=True with queryset
-        # and BrowsableAPIRenderer thinks it is a DETAIL view not a LIST view!
-
         response = self.client.get(
             reverse("product-list"),
             data={"sideload": "categories,suppliers,partners"},
