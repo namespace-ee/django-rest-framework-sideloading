@@ -126,13 +126,17 @@ class SideloadableRelationsMixin(object):
         if page is not None:
             sideloadable_page = self.get_sideloadable_page(page)
             serializer = self.sideloading_serializer_class(
-                instance=sideloadable_page, context={"request": request}
+                instance=sideloadable_page,
+                fields_to_load=[self._primary_field_name] + list(self.relations_to_sideload),
+                context={"request": request}
             )
             return self.get_paginated_response(serializer.data)
         else:
             sideloadable_page = self.get_sideloadable_page_from_queryset(queryset)
             serializer = self.sideloading_serializer_class(
-                instance=sideloadable_page, context={"request": request}
+                instance=sideloadable_page,
+                fields_to_load=[self._primary_field_name] + list(self.relations_to_sideload),
+                context={"request": request}
             )
             return Response(serializer.data)
 
