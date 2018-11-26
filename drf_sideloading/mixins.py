@@ -119,11 +119,6 @@ class SideloadableRelationsMixin(object):
                 request, *args, **kwargs
             )
 
-        # disable 'post', 'put', 'patch', 'delete' and 'options' methods.
-        # this also disables the forms in BrowsableAPIRenderer
-        self.http_method_names = list(
-            set(self.http_method_names) - {'post', 'put', 'patch', 'delete', 'options'}
-        )
         # After this `relations_to_sideload` is safe to use
         queryset = self.get_queryset()
 
@@ -227,30 +222,3 @@ class SideloadableRelationsMixin(object):
         if remaining_lookup:
             return self.filter_related_objects(related_objects_set, remaining_lookup)
         return set(related_objects_set) - {"", None}
-
-    def create(self, *args, **kwargs):
-        raise RuntimeError("Method 'create' can not be called while sideloading")
-
-    def perform_create(self, *args, **kwargs):
-        raise RuntimeError("Method 'perform_create' can not be called while sideloading")
-
-    def get_success_headers(self, *args, **kwargs):
-        raise RuntimeError("Method 'get_success_headers' can not be called while sideloading")
-
-    def retrieve(self, *args, **kwargs):
-        raise RuntimeError("Method 'retrieve' can not be called while sideloading")
-
-    def update(self, *args, **kwargs):
-        raise RuntimeError("Method 'update' can not be called while sideloading")
-
-    def perform_update(self, *args, **kwargs):
-        raise RuntimeError("Method 'perform_update' can not be called while sideloading")
-
-    def partial_update(self, *args, **kwargs):
-        raise RuntimeError("Method 'partial_update' can not be called while sideloading")
-
-    def destroy(self, *args, **kwargs):
-        raise RuntimeError("Method 'destroy' can not be called while sideloading")
-
-    def perform_destroy(self, *args, **kwargs):
-        raise RuntimeError("Method 'perform_destroy' can not be called while sideloading")

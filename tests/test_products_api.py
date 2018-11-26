@@ -3,10 +3,6 @@
 
 from __future__ import unicode_literals
 
-from rest_framework.permissions import BasePermission
-from rest_framework.renderers import BrowsableAPIRenderer
-from rest_framework.settings import api_settings
-
 from drf_sideloading.serializers import SideLoadableSerializer
 from tests import DJANGO_20
 
@@ -433,68 +429,6 @@ class TestDrfSideloadingValidPrefetches(TestCase):
 
         response = self.client.get(
             reverse("product-list"), {"sideload": "categories,suppliers,partners"}
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        expected_relation_names = ["products", "categories", "suppliers", "partners"]
-
-        self.assertEqual(4, len(response.data))
-        self.assertEqual(set(expected_relation_names), set(response.data))
-
-
-class TestDrfSideloadingBrowsableApiPermissions(TestCase):
-    """Run tests while including mixin but not defining sideloading"""
-
-    @classmethod
-    def setUpClass(cls):
-        super(TestDrfSideloadingBrowsableApiPermissions, cls).setUpClass()
-
-        class ProductPermission(BasePermission):
-            def has_permission(self, request, view):
-                """
-                Return `True` if permission is granted, `False` otherwise.
-                """
-                return True
-
-            def has_object_permission(self, request, view, obj):
-                raise RuntimeError('This must not be called, when sideloadading is used!')
-
-        class ProductSideloadableSerializer(SideLoadableSerializer):
-            products = ProductSerializer(many=True)
-            categories = CategorySerializer(source="category", many=True)
-            suppliers = SupplierSerializer(source="supplier", many=True)
-            partners = PartnerSerializer(many=True)
-
-            class Meta:
-                primary = "products"
-                prefetches = {
-                    "categories": "category",
-                    "suppliers": ["supplier"],
-                    "partners": None,
-                }
-
-        ProductViewSet.renderer_classes = (BrowsableAPIRenderer, )
-        ProductViewSet.permission_classes = (ProductPermission, )
-        ProductViewSet.sideloading_serializer_class = ProductSideloadableSerializer
-
-    @classmethod
-    def tearDownClass(cls):
-        ProductViewSet.renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES
-        ProductViewSet.permission_classes = api_settings.DEFAULT_PERMISSION_CLASSES
-        super(TestDrfSideloadingBrowsableApiPermissions, cls).tearDownClass()
-
-    def test_sideloading_does_not_render_forms_and_check_object_permissions(self):
-        # browsableAPIRenderer decides, if its a DETAIL view in serializer is many=True
-        # if not, and instance exists, it checks the permissions for the instance
-        # and renders the forms.
-
-        # This should not happen when sideloading is used.
-        # sideloading initiated the serializer as an instance not many=True with queryset
-        # and BrowsableAPIRenderer thinks it is a DETAIL view not a LIST view!
-
-        response = self.client.get(
-            reverse("product-list"),
-            data={"sideload": "categories,suppliers,partners"},
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
