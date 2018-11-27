@@ -8,7 +8,9 @@ from rest_framework.relations import PKOnlyObject
 class SideLoadableSerializer(serializers.Serializer):
     def __init__(self, instance=None, data=empty, fields_to_load=None, **kwargs):
         self.fields_to_load = fields_to_load
-        super(SideLoadableSerializer, self).__init__(instance=instance, data=data, **kwargs)
+        super(SideLoadableSerializer, self).__init__(
+            instance=instance, data=data, **kwargs
+        )
 
     def to_representation(self, instance):
         """
@@ -18,7 +20,9 @@ class SideLoadableSerializer(serializers.Serializer):
         fields = [
             f
             for f in self.fields.values()
-            if not f.write_only and f.source in instance.keys() and f.field_name in self.fields_to_load
+            if not f.write_only
+            and f.source in instance.keys()
+            and f.field_name in self.fields_to_load
         ]
 
         for field in fields:

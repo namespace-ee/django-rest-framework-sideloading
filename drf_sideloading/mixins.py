@@ -101,7 +101,9 @@ class SideloadableRelationsMixin(object):
         return cleaned_prefetches
 
     def initialize_request(self, request, *args, **kwargs):
-        request = super(SideloadableRelationsMixin, self).initialize_request(request=request, *args, **kwargs)
+        request = super(SideloadableRelationsMixin, self).initialize_request(
+            request=request, *args, **kwargs
+        )
 
         sideload_params = self.parse_query_param(
             sideload_parameter=request.query_params.get(self.query_param_name, "")
@@ -109,8 +111,15 @@ class SideloadableRelationsMixin(object):
         if request.method == "GET" and sideload_params:
             # When sideloading disable BrowsableAPIForms
             if BrowsableAPIRenderer in self.renderer_classes:
-                renderer_classes = list(self.renderer_classes) if isinstance(self.renderer_classes, tuple) else self.renderer_classes
-                renderer_classes = [BrowsableAPIRendererWithoutForms if r == BrowsableAPIRenderer else r for r in renderer_classes]
+                renderer_classes = (
+                    list(self.renderer_classes)
+                    if isinstance(self.renderer_classes, tuple)
+                    else self.renderer_classes
+                )
+                renderer_classes = [
+                    BrowsableAPIRendererWithoutForms if r == BrowsableAPIRenderer else r
+                    for r in renderer_classes
+                ]
                 self.renderer_classes = renderer_classes
 
         return request
@@ -141,16 +150,18 @@ class SideloadableRelationsMixin(object):
             sideloadable_page = self.get_sideloadable_page(page)
             serializer = self.sideloading_serializer_class(
                 instance=sideloadable_page,
-                fields_to_load=[self._primary_field_name] + list(self.relations_to_sideload),
-                context={"request": request}
+                fields_to_load=[self._primary_field_name]
+                + list(self.relations_to_sideload),
+                context={"request": request},
             )
             return self.get_paginated_response(serializer.data)
         else:
             sideloadable_page = self.get_sideloadable_page_from_queryset(queryset)
             serializer = self.sideloading_serializer_class(
                 instance=sideloadable_page,
-                fields_to_load=[self._primary_field_name] + list(self.relations_to_sideload),
-                context={"request": request}
+                fields_to_load=[self._primary_field_name]
+                + list(self.relations_to_sideload),
+                context={"request": request},
             )
             return Response(serializer.data)
 
