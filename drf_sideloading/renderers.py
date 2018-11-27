@@ -3,7 +3,7 @@ from rest_framework.renderers import BrowsableAPIRenderer
 
 class BrowsableAPIRendererWithoutForms(BrowsableAPIRenderer):
     def get_context(self, *args, **kwargs):
-        context = super().get_context(*args, **kwargs)
+        context = super(BrowsableAPIRenderer, self).get_context(*args, **kwargs)
         context["display_edit_forms"] = False
         return context
 
