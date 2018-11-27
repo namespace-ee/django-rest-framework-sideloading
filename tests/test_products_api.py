@@ -3,6 +3,10 @@
 
 from __future__ import unicode_literals
 
+from rest_framework.permissions import BasePermission
+from rest_framework.renderers import BrowsableAPIRenderer, JSONRenderer
+from rest_framework.settings import api_settings
+
 from drf_sideloading.serializers import SideLoadableSerializer
 from tests import DJANGO_20
 
@@ -438,13 +442,106 @@ class TestDrfSideloadingValidPrefetches(TestCase):
         self.assertEqual(set(expected_relation_names), set(response.data))
 
 
+class TestDrfSideloadingBrowsableApiPermissions(TestCase):
+    """Run tests while including mixin but not defining sideloading"""
+
+    @classmethod
+    def setUpClass(cls):
+        super(TestDrfSideloadingBrowsableApiPermissions, cls).setUpClass()
+
+        class ProductPermission(BasePermission):
+            def has_permission(self, request, view):
+                """
+                Return `True` if permission is granted, `False` otherwise.
+                """
+                return True
+
+            def has_object_permission(self, request, view, obj):
+                raise RuntimeError(
+                    "This must not be called, when sideloadading is used!"
+                )
+
+        class ProductSideloadableSerializer(SideLoadableSerializer):
+            products = ProductSerializer(many=True)
+            categories = CategorySerializer(source="category", many=True)
+            suppliers = SupplierSerializer(source="supplier", many=True)
+            partners = PartnerSerializer(many=True)
+
+            class Meta:
+                primary = "products"
+                prefetches = {
+                    "categories": "category",
+                    "suppliers": ["supplier"],
+                    "partners": None,
+                }
+
+        ProductViewSet.renderer_classes = (BrowsableAPIRenderer, JSONRenderer)
+        ProductViewSet.permission_classes = (ProductPermission,)
+        ProductViewSet.sideloading_serializer_class = ProductSideloadableSerializer
+
+    @classmethod
+    def tearDownClass(cls):
+        ProductViewSet.renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES
+        ProductViewSet.permission_classes = api_settings.DEFAULT_PERMISSION_CLASSES
+        super(TestDrfSideloadingBrowsableApiPermissions, cls).tearDownClass()
+
+    def test_sideloading_does_not_render_forms_and_check_object_permissions(self):
+        response = self.client.get(
+            reverse("product-list"), data={"sideload": "categories,suppliers,partners"}
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        expected_relation_names = ["products", "categories", "suppliers", "partners"]
+
+        self.assertEqual(4, len(response.data))
+        self.assertEqual(set(expected_relation_names), set(response.data))
+
+    def test_sideloading_allow_post_without_sideloading(self):
+        category = Category.objects.create(name="Category")
+        supplier = Supplier.objects.create(name="Supplier")
+
+        headers = {"HTTP_ACCEPT": "application/json"}
+        response = self.client.post(
+            reverse("product-list"),
+            data={
+                "name": "Random product",
+                "category": category.id,
+                "supplier": supplier.id,
+                "partners": [],
+            },
+            **headers
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(isinstance(response.data, dict))
+
+    def test_sideloading_allow_post_with_sideloading(self):
+        category = Category.objects.create(name="Category")
+        supplier = Supplier.objects.create(name="Supplier")
+
+        headers = {"HTTP_ACCEPT": "application/json"}
+        response = self.client.post(
+            "{}{}".format(
+                reverse("product-list"), "?sideload=categories,suppliers,partners"
+            ),
+            data={
+                "name": "Random product",
+                "category": category.id,
+                "supplier": supplier.id,
+                "partners": [],
+            },
+            **headers
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(isinstance(response.data, dict))
+
+
 class ProductSideloadSameSourceDuplicationTestCase(BaseTestCase):
     @classmethod
     def setUpClass(cls):
         super(ProductSideloadSameSourceDuplicationTestCase, cls).setUpClass()
 
         class OldCategorySerializer(serializers.ModelSerializer):
-            old_name = serializers.CharField(source='name')
+            old_name = serializers.CharField(source="name")
 
             class Meta:
                 model = Category
@@ -459,26 +556,22 @@ class ProductSideloadSameSourceDuplicationTestCase(BaseTestCase):
 
             class Meta:
                 primary = "products"
-                prefetches = {
-                    "category": "category",
-                    "old_categories": "category",
-                }
+                prefetches = {"category": "category", "old_categories": "category"}
 
         ProductViewSet.sideloading_serializer_class = ProductSideloadableSerializer
 
     def test_list_sideload_categories(self):
-        response = self.client.get(
-            reverse("product-list"), {"sideload": "categories"}
-        )
+        response = self.client.get(reverse("product-list"), {"sideload": "categories"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         expected_relation_names = ["products", "categories"]
 
         self.assertSetEqual(
-            set(response.data.serializer.instance.keys()),
-            {"products", "category"}
+            set(response.data.serializer.instance.keys()), {"products", "category"}
         )
-        self.assertSetEqual(set(dict(response.data).keys()), set(expected_relation_names))
+        self.assertSetEqual(
+            set(dict(response.data).keys()), set(expected_relation_names)
+        )
 
     def test_list_sideload_old_categories(self):
         response = self.client.get(
@@ -489,10 +582,11 @@ class ProductSideloadSameSourceDuplicationTestCase(BaseTestCase):
         expected_relation_names = ["products", "old_categories"]
 
         self.assertSetEqual(
-            set(response.data.serializer.instance.keys()),
-            {"products", "category"}
+            set(response.data.serializer.instance.keys()), {"products", "category"}
         )
-        self.assertSetEqual(set(dict(response.data).keys()), set(expected_relation_names))
+        self.assertSetEqual(
+            set(dict(response.data).keys()), set(expected_relation_names)
+        )
 
     def test_list_sideload_new_categories_and_old_categories(self):
         response = self.client.get(
@@ -503,7 +597,8 @@ class ProductSideloadSameSourceDuplicationTestCase(BaseTestCase):
         expected_relation_names = ["products", "categories", "old_categories"]
 
         self.assertSetEqual(
-            set(response.data.serializer.instance.keys()),
-            {"products", "category"}
+            set(response.data.serializer.instance.keys()), {"products", "category"}
         )
-        self.assertSetEqual(set(dict(response.data).keys()), set(expected_relation_names))
+        self.assertSetEqual(
+            set(dict(response.data).keys()), set(expected_relation_names)
+        )
