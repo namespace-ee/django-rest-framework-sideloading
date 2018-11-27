@@ -603,4 +603,3 @@ class ProductSideloadSameSourceDuplicationTestCase(BaseTestCase):
         self.assertSetEqual(
             set(dict(response.data).keys()), set(expected_relation_names)
         )
-
