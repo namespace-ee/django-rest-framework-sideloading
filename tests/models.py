@@ -24,4 +24,4 @@ class Product(models.Model):
     supplier = models.ForeignKey(
         Supplier, related_name="products", on_delete=models.CASCADE
     )
-    partners = models.ManyToManyField(Partner, related_name="products")
+    partners = models.ManyToManyField(Partner, related_name="products", blank=True)

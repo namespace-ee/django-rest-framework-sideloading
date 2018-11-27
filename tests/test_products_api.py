@@ -4,7 +4,7 @@
 from __future__ import unicode_literals
 
 from rest_framework.permissions import BasePermission
-from rest_framework.renderers import BrowsableAPIRenderer
+from rest_framework.renderers import BrowsableAPIRenderer, JSONRenderer
 from rest_framework.settings import api_settings
 
 from drf_sideloading.serializers import SideLoadableSerializer
@@ -473,7 +473,7 @@ class TestDrfSideloadingBrowsableApiPermissions(TestCase):
                     "partners": None,
                 }
 
-        ProductViewSet.renderer_classes = (BrowsableAPIRenderer, )
+        ProductViewSet.renderer_classes = (BrowsableAPIRenderer, JSONRenderer, )
         ProductViewSet.permission_classes = (ProductPermission, )
         ProductViewSet.sideloading_serializer_class = ProductSideloadableSerializer
 
@@ -496,27 +496,31 @@ class TestDrfSideloadingBrowsableApiPermissions(TestCase):
         self.assertEqual(set(expected_relation_names), set(response.data))
 
     def test_sideloading_allow_post_without_sideloading(self):
-        category = Category.objects.first()
-        supplier = Supplier.objects.first()
+        category = Category.objects.create(name="Category")
+        supplier = Supplier.objects.create(name="Supplier")
+
+        headers = {"HTTP_ACCEPT": "application/json"}
         response = self.client.post(
             reverse("product-list"),
-            data={"name": "Random product", "category": category.id, "supplier": supplier.id},
-            format="json",
+            data={"name": "Random product", "category": category.id, "supplier": supplier.id, "partners": []},
+            **headers
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(isinstance(response.data, dict))
     
     def test_sideloading_allow_post_with_sideloading(self):
+        category = Category.objects.create(name="Category")
+        supplier = Supplier.objects.create(name="Supplier")
+
+        headers = {"HTTP_ACCEPT": "application/json"}
         response = self.client.post(
             '{}{}'.format(reverse("product-list"), '?sideload=categories,suppliers,partners'),
-            data={"name": "Random product"},
-            format="json",
+            data={"name": "Random product", "category": category.id, "supplier": supplier.id, "partners": []},
+            content_type="application/json",
+            **headers
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-
-        expected_relation_names = ["products", "categories", "suppliers", "partners"]
-
-        self.assertEqual(4, len(response.data))
-        self.assertEqual(set(expected_relation_names), set(response.data))
+        self.assertTrue(isinstance(response.data, dict))
 
 class ProductSideloadSameSourceDuplicationTestCase(BaseTestCase):
     @classmethod
