@@ -531,7 +531,6 @@ class TestDrfSideloadingBrowsableApiPermissions(TestCase):
             },
             **headers
         )
-        print(response.content)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(isinstance(response.data, dict))
 
