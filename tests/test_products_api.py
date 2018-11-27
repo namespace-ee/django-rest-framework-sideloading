@@ -529,7 +529,6 @@ class TestDrfSideloadingBrowsableApiPermissions(TestCase):
                 "supplier": supplier.id,
                 "partners": [],
             },
-            content_type="application/json",
             **headers
         )
         print(response.content)
