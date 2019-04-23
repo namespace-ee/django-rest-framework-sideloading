@@ -225,7 +225,7 @@ class SideloadableRelationsMixin(object):
         current_lookup, remaining_lookup = (
             lookup.split("__", 1) if "__" in lookup else (lookup, None)
         )
-        related_objects_set = {getattr(r, current_lookup) for r in related_objects}
+        related_objects_set = {getattr(r, current_lookup) for r in related_objects} - {None}
         if related_objects_set and next(
             iter(related_objects_set)
         ).__class__.__name__ in ["ManyRelatedManager", "RelatedManager"]:
