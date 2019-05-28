@@ -1,5 +1,7 @@
 from __future__ import unicode_literals
 
+from collections import defaultdict
+
 import six
 import copy
 
@@ -15,6 +17,7 @@ from drf_sideloading.serializers import SideLoadableSerializer
 
 class SideloadableRelationsMixin(object):
     query_param_name = "sideload"
+    flat_param_name = "flat"
     sideloading_serializer_class = None
     _primary_field_name = None
     _sideloadable_fields = None
@@ -134,6 +137,8 @@ class SideloadableRelationsMixin(object):
             return super(SideloadableRelationsMixin, self).list(
                 request, *args, **kwargs
             )
+        # check if result needs to be flattened
+        flatten = request.query_params.get(self.flat_param_name) in ['true', '1']
 
         # After this `relations_to_sideload` is safe to use
         queryset = self.get_queryset()
@@ -154,6 +159,8 @@ class SideloadableRelationsMixin(object):
                 + list(self.relations_to_sideload),
                 context={"request": request},
             )
+            if flatten:
+                return self.get_paginated_response(self.flatten_sideloaded_data(serialized_data=serializer.data))
             return self.get_paginated_response(serializer.data)
         else:
             sideloadable_page = self.get_sideloadable_page_from_queryset(queryset)
@@ -163,7 +170,42 @@ class SideloadableRelationsMixin(object):
                 + list(self.relations_to_sideload),
                 context={"request": request},
             )
+            if flatten:
+                return Response(self.flatten_sideloaded_data(serialized_data=serializer.data))
             return Response(serializer.data)
+
+    def flatten_data(self, input_data, initial_key):
+        out = {}
+
+        def flatten(data, key):
+            if isinstance(data, dict):
+                for dict_key, dict_value in data.items():
+                    flatten(data=dict_value, key="{}__{}".format(key, dict_key))
+            elif isinstance(data, list):
+                if any(isinstance(list_obj, (dict, list)) for list_obj in data):
+                    for i, list_obj in enumerate(data):
+                        flatten(data=list_obj, key="{}__{}".format(key, i))
+                else:
+                    out[key] = data
+            else:
+                out[key] = data
+
+        flatten(input_data, initial_key)
+        return out
+
+    def flatten_sideloaded_data(self, serialized_data):
+        primary_objects = serialized_data.pop(self._primary_field_name)
+        sideloaded_data = defaultdict(dict)
+        relation_sources = {}
+        for relation in self.relations_to_sideload:
+            relation_sources[relation] = self.sideloading_serializer_class._declared_fields.get(relation).source
+            for data in serialized_data[relation]:
+                sideloaded_data[relation][data["url"]] = self.flatten_data(data, relation_sources[relation])
+
+        for object in primary_objects:
+            for relation in self.relations_to_sideload:
+                object.update(sideloaded_data[relation][object.pop(relation_sources[relation])])
+        return primary_objects
 
     def parse_query_param(self, sideload_parameter):
         """
