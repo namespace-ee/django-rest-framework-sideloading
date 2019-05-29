@@ -154,6 +154,45 @@ class ProductSideloadTestCase(BaseTestCase):
         self.assertEqual(2, len(response.data))
         self.assertEqual(set(expected_relation_names), set(response.data))
 
+    def test_selected_fields_only(self):
+        response = self.client.get(reverse("product-list"), data={"fields": "id,name,supplier__url,supplier__name"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.assertEqual(1, len(response.data))
+        self.assertEqual(3, len(response.data[0]))
+        self.assertIsNotNone(response.data[0].get("id"))
+        self.assertIsNotNone(response.data[0].get("name"))
+        self.assertIsNotNone(response.data[0].get("supplier"))
+        self.assertEqual("Product", response.data[0]["name"])
+
+    def test_sideloading_with_selected_fields_only(self):
+        response = self.client.get(
+            reverse("product-list"),
+            data={
+                "sideload": "suppliers",
+                "fields": "id,name,supplier__name"
+            },
+            format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        expected_relation_names = ["products", "suppliers"]
+        self.assertEqual(set(expected_relation_names), set(response.data))
+
+        self.assertEqual(1, len(response.data.get("products")))
+        self.assertEqual(1, len(response.data.get("suppliers")))
+
+        self.assertEqual(2, len(response.data.get("products")[0]))
+        self.assertIsNotNone(response.data[0].get("id"))
+        self.assertIsNone(response.data[0].get("url"))
+        self.assertIsNotNone(response.data[0].get("name"))
+        self.assertIsNone(response.data[0].get("supplier"))
+
+        self.assertEqual(1, len(response.data.get("suppliers")[0]))
+        self.assertIsNotNone(response.data[0].get("id"))
+        self.assertIsNone(response.data[0].get("url"))
+        self.assertIsNotNone(response.data[0].get("name"))
+
 
 ###################################
 # Different Correct usages of API #

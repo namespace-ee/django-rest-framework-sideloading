@@ -1,6 +1,6 @@
 from rest_framework import viewsets
 
-from drf_sideloading.mixins import SideloadableRelationsMixin
+from drf_sideloading.mixins import SideloadableRelationsMixin, SelectableDataMixin
 from .models import Product, Category, Supplier, Partner
 from .serializers import (
     ProductSerializer,
@@ -12,7 +12,7 @@ from .serializers import (
 )
 
 
-class ProductViewSet(SideloadableRelationsMixin, viewsets.ModelViewSet):
+class ProductViewSet(SelectableDataMixin, SideloadableRelationsMixin, viewsets.ModelViewSet):
     """
     A simple ViewSet for viewing and editing products.
     """

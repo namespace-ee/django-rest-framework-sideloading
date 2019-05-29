@@ -1,8 +1,10 @@
+import re
 from collections import OrderedDict
 
 from rest_framework import serializers
 from rest_framework.fields import SkipField, empty
 from rest_framework.relations import PKOnlyObject
+from rest_framework.serializers import ListSerializer, ModelSerializer
 
 
 class SideLoadableSerializer(serializers.Serializer):
@@ -45,3 +47,30 @@ class SideLoadableSerializer(serializers.Serializer):
                 ret[field.field_name] = field.to_representation(attribute)
 
         return ret
+
+
+class SelectableDataSerializer(serializers.Serializer):
+
+    def __init__(self, *args, **kwargs):
+        allowed_fields = kwargs.pop("allowed_fields", None)
+        super(SelectableDataSerializer, self).__init__(*args, **kwargs)
+        if allowed_fields is not None:
+            self.remove_fields(self, set(allowed_fields))
+
+    def remove_fields(self, serializer, allowed_fields):
+        for field_name in list(serializer.fields.keys()):
+            if field_name not in allowed_fields:
+                child_fields = [
+                    re.compile('^{}__'.format(field_name)).sub('', x)
+                    for x in allowed_fields if x.startswith("{}__".format(field_name))
+                ]
+                if child_fields:
+                    child_serializer = serializer.fields[field_name]
+                    if isinstance(child_serializer, ListSerializer):
+                        child_serializer = child_serializer.child
+                    if isinstance(child_serializer, ModelSerializer):
+                        self.remove_fields(child_serializer, child_fields)
+                        continue
+
+                # pop the field
+                serializer.fields.pop(field_name)

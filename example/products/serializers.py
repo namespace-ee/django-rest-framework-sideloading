@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from drf_sideloading.serializers import SideLoadableSerializer
+from drf_sideloading.serializers import SideLoadableSerializer, SelectableDataSerializer
 from .models import Product, Category, Supplier, Partner
 
 
@@ -43,7 +43,7 @@ class CategorySideloadableSerializer(SideLoadableSerializer):
         }
 
 
-class ProductSideloadableSerializer(SideLoadableSerializer):
+class ProductSideloadableSerializer(SelectableDataSerializer, SideLoadableSerializer):
     products = ProductSerializer(many=True)
     categories = CategorySerializer(source="category", many=True)
     suppliers = SupplierSerializer(source="supplier", many=True)
