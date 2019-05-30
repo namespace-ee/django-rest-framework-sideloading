@@ -10,9 +10,7 @@ from rest_framework.serializers import ListSerializer, ModelSerializer
 class SideLoadableSerializer(serializers.Serializer):
     def __init__(self, instance=None, data=empty, fields_to_load=None, **kwargs):
         self.fields_to_load = fields_to_load
-        super(SideLoadableSerializer, self).__init__(
-            instance=instance, data=data, **kwargs
-        )
+        super(SideLoadableSerializer, self).__init__(instance=instance, data=data, **kwargs)
 
     def to_representation(self, instance):
         """
@@ -52,10 +50,12 @@ class SideLoadableSerializer(serializers.Serializer):
 class SelectableDataSerializer(serializers.Serializer):
 
     def __init__(self, *args, **kwargs):
-        allowed_fields = kwargs.pop("allowed_fields", None)
+        allowed_fields = kwargs.pop("allowed_fields", [])
+        required_fields = kwargs.pop("required_fields", [])
+
         super(SelectableDataSerializer, self).__init__(*args, **kwargs)
-        if allowed_fields is not None:
-            self.remove_fields(self, set(allowed_fields))
+        if allowed_fields or required_fields:
+            self.remove_fields(self, set(allowed_fields + required_fields))
 
     def remove_fields(self, serializer, allowed_fields):
         for field_name in list(serializer.fields.keys()):
