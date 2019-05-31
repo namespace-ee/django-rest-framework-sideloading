@@ -165,34 +165,14 @@ class ProductSideloadTestCase(BaseTestCase):
         self.assertEqual(1, len(response.data))
         flat_product_data = response.data[0]
         # product data
-        self.assertIsNotNone(flat_product_data.get("id"), response.data)
-        self.assertIsNotNone(flat_product_data.get("name"), response.data)
-        self.assertIsNotNone(flat_product_data.get("category"), response.data)
-        self.assertIsNotNone(flat_product_data.get("supplier"), response.data)
-        self.assertIsNotNone(flat_product_data.get("partners"), response.data)
-
-    def test_flattening_with_sideloading(self):
-        response = self.client.get(
-            reverse("product-list"),
-            data={
-                "sideload": "suppliers",
-                "flat": "true",
-            },
-            format="json"
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        self.assertEqual(1, len(response.data))
-        flat_product_data = response.data[0]
-        # product data
-        self.assertIsNotNone(flat_product_data.get("id"), response.data)
-        self.assertIsNotNone(flat_product_data.get("name"), response.data)
-        self.assertIsNotNone(flat_product_data.get("category"), response.data)
-        self.assertIsNotNone(flat_product_data.get("partners"), response.data)
+        self.assertIsNotNone(flat_product_data.get("id"), flat_product_data)
+        self.assertIsNotNone(flat_product_data.get("name"), flat_product_data)
+        self.assertIsNotNone(flat_product_data.get("category"), flat_product_data)
+        self.assertIsNotNone(flat_product_data.get("partners"), flat_product_data)
         # supplier
-        self.assertIsNone(flat_product_data.get("supplier"), response.data)
-        self.assertIsNotNone(flat_product_data.get("supplier__id"), response.data)
-        self.assertIsNotNone(flat_product_data.get("supplier__name"), response.data)
+        self.assertIsNone(flat_product_data.get("supplier"), flat_product_data)
+        self.assertIsNotNone(flat_product_data.get("supplier__id"), flat_product_data)
+        self.assertIsNotNone(flat_product_data.get("supplier__name"), flat_product_data)
 
 
 class ProductSelectableDataTestCase(BaseTestCase):
