@@ -7,25 +7,25 @@ from tests.models import Supplier, Category, Product, Partner
 class SupplierSerializer(serializers.ModelSerializer):
     class Meta:
         model = Supplier
-        fields = ["id", "name"]
+        fields = "__all__"
 
 
 class PartnerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Partner
-        fields = ["id", "name"]
+        fields = "__all__"
 
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = ["id", "name"]
+        fields = "__all__"
 
 
 class ProductSerializer(SelectableDataSerializer, serializers.ModelSerializer):
     class Meta:
         model = Product
-        fields = ["id", "name", "category", "supplier", "partners"]
+        fields = "__all__"
 
 
 class CategorySideloadableSerializer(SideLoadableSerializer):

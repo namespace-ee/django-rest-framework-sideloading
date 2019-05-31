@@ -2,13 +2,13 @@ from __future__ import unicode_literals
 
 from collections import defaultdict
 
-import six
+# import six
 import copy
 
 from itertools import chain
 
 from rest_framework.relations import PrimaryKeyRelatedField, HyperlinkedRelatedField, SlugRelatedField, \
-    HyperlinkedIdentityField
+    HyperlinkedIdentityField, ManyRelatedField
 from rest_framework.renderers import BrowsableAPIRenderer
 from rest_framework.response import Response
 from rest_framework.serializers import ListSerializer, ModelSerializer
@@ -101,7 +101,7 @@ class SideloadableRelationsMixin(object):
             if v is not None:
                 if isinstance(v, list):
                     cleaned_prefetches[k] = v
-                elif isinstance(v, six.string_types):
+                elif isinstance(v, str):
                     cleaned_prefetches[k] = [v]
                 else:
                     raise RuntimeError(
@@ -137,7 +137,7 @@ class SideloadableRelationsMixin(object):
         fields_mapping = {}
 
         def flatmap_serializer_fields(serializer, original_tail, tail):
-            for field in serializer.Meta.fields:
+            for field in serializer.fields:
                 field_serializer = serializer.fields.get(field)
                 source = getattr(field_serializer, "source", None)
                 flat_source = (source or field).replace('.', '__').replace('*', field)
@@ -175,10 +175,13 @@ class SideloadableRelationsMixin(object):
             # find the relation key that the primary model points to (id, url, slug ect.. )
             relation_field = primary_serializer.fields[primary_key]
 
+            if isinstance(relation_field, ManyRelatedField):
+                relation_field = relation_field.child_relation
+
             if isinstance(relation_field, PrimaryKeyRelatedField):
                 relation_key = relation_field.pk_field or relation_field.queryset.model._meta.pk.name
                 if relation_key not in sl_related_serializer.Meta.fields:
-                    for field, field_serializer in sl_related_serializer._declared_fields.items():
+                    for field, field_serializer in sl_related_serializer.fields.items():
                         if field_serializer.source == relation_key:
                             relation_key = field
                             break
@@ -188,7 +191,7 @@ class SideloadableRelationsMixin(object):
             elif isinstance(relation_field, SlugRelatedField):
                 relation_key = relation_field.slug_field
                 if relation_key not in sl_related_serializer.Meta.fields:
-                    for field, field_serializer in sl_related_serializer._declared_fields.items():
+                    for field, field_serializer in sl_related_serializer.fields.items():
                         if field_serializer.source == relation_key:
                             relation_key = field
                             break
@@ -196,7 +199,7 @@ class SideloadableRelationsMixin(object):
                         raise RuntimeError("SlugRelated related Sideloadable serializers must have a field with value!")
 
             elif isinstance(relation_field, HyperlinkedRelatedField):
-                for field, field_serializer in sl_related_serializer._declared_fields.items():
+                for field, field_serializer in sl_related_serializer.fields.items():
                     if isinstance(field_serializer, HyperlinkedIdentityField):
                         relation_key = field
                         break
@@ -334,7 +337,14 @@ class SideloadableRelationsMixin(object):
         for object in primary_objects:
             for relation, reference_keys in self.related_keys_for_flattening.items():
                 for primary_key, sideloaded_ref in reference_keys.items():
-                    object.update(sideloaded_data[relation][object.pop(primary_key)])
+                    primary_relation_value = object.pop(primary_key)
+                    if isinstance(primary_relation_value, list):
+                        object[relation] = [
+                            sideloaded_data[relation][relation_value]
+                            for relation_value in primary_relation_value
+                        ]
+                    else:
+                        object.update(sideloaded_data[relation][primary_relation_value])
         return primary_objects
 
     def parse_query_param(self, sideload_parameter):

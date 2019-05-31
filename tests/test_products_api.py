@@ -174,6 +174,28 @@ class ProductSideloadTestCase(BaseTestCase):
         self.assertIsNotNone(flat_product_data.get("supplier__id"), flat_product_data)
         self.assertIsNotNone(flat_product_data.get("supplier__name"), flat_product_data)
 
+    def test_flattening_many_to_many(self):
+        response = self.client.get(
+            reverse("product-list"),
+            data={"flat": "true", "sideload": "partners"},
+            format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.assertEqual(1, len(response.data))
+        flat_product_data = response.data[0]
+        # product data
+        self.assertIsNotNone(flat_product_data.get("id"), flat_product_data)
+        self.assertIsNotNone(flat_product_data.get("name"), flat_product_data)
+        self.assertIsNotNone(flat_product_data.get("category"), flat_product_data)
+        self.assertIsNotNone(flat_product_data.get("supplier"), flat_product_data)
+        # partners
+        partners = flat_product_data.get("partners")
+        self.assertIsNotNone(partners, partners)
+        self.assertEqual(2, len(partners))
+        self.assertSetEqual(set(partners[0].keys()), {'partners__id', 'partners__name'}, partners[0])
+        self.assertSetEqual(set(partners[1].keys()), {'partners__id', 'partners__name'}, partners[1])
+
 
 class ProductSelectableDataTestCase(BaseTestCase):
     @classmethod
@@ -280,6 +302,27 @@ class ProductSelectableDataTestCase(BaseTestCase):
         self.assertIsNone(flat_product_data.get("supplier__id"), response.data)
         self.assertIsNone(flat_product_data.get("supplier__name"), response.data)
 
+    def test_flattening_many_to_many_with_selected_fields(self):
+        response = self.client.get(
+            reverse("product-list"),
+            data={"flat": "true", "sideload": "partners", "fields": "name,partners__name",},
+            format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.assertEqual(1, len(response.data))
+        flat_product_data = response.data[0]
+        # product data
+        self.assertIsNone(flat_product_data.get("id"), flat_product_data)
+        self.assertIsNotNone(flat_product_data.get("name"), flat_product_data)
+        self.assertIsNone(flat_product_data.get("category"), flat_product_data)
+        self.assertIsNone(flat_product_data.get("supplier"), flat_product_data)
+        # partners
+        partners = flat_product_data.get("partners")
+        self.assertIsNotNone(partners, partners)
+        self.assertEqual(2, len(partners))
+        self.assertSetEqual(set(partners[0].keys()), {'partners__name'}, partners[0])
+        self.assertSetEqual(set(partners[1].keys()), {'partners__name'}, partners[1])
 
 ###################################
 # Different Correct usages of API #
