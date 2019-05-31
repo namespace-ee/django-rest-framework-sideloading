@@ -154,6 +154,46 @@ class ProductSideloadTestCase(BaseTestCase):
         self.assertEqual(2, len(response.data))
         self.assertEqual(set(expected_relation_names), set(response.data))
 
+    def test_flattening(self):
+        response = self.client.get(
+            reverse("product-list"),
+            data={"flat": "true", "sideload": "suppliers",},
+            format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.assertEqual(1, len(response.data))
+        flat_product_data = response.data[0]
+        # product data
+        self.assertIsNotNone(flat_product_data.get("id"), response.data)
+        self.assertIsNotNone(flat_product_data.get("name"), response.data)
+        self.assertIsNotNone(flat_product_data.get("category"), response.data)
+        self.assertIsNotNone(flat_product_data.get("supplier"), response.data)
+        self.assertIsNotNone(flat_product_data.get("partners"), response.data)
+
+    def test_flattening_with_sideloading(self):
+        response = self.client.get(
+            reverse("product-list"),
+            data={
+                "sideload": "suppliers",
+                "flat": "true",
+            },
+            format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.assertEqual(1, len(response.data))
+        flat_product_data = response.data[0]
+        # product data
+        self.assertIsNotNone(flat_product_data.get("id"), response.data)
+        self.assertIsNotNone(flat_product_data.get("name"), response.data)
+        self.assertIsNotNone(flat_product_data.get("category"), response.data)
+        self.assertIsNotNone(flat_product_data.get("partners"), response.data)
+        # supplier
+        self.assertIsNone(flat_product_data.get("supplier"), response.data)
+        self.assertIsNotNone(flat_product_data.get("supplier__id"), response.data)
+        self.assertIsNotNone(flat_product_data.get("supplier__name"), response.data)
+
 
 class ProductSelectableDataTestCase(BaseTestCase):
     @classmethod
@@ -213,32 +253,52 @@ class ProductSelectableDataTestCase(BaseTestCase):
         self.assertIsNone(product_data.get("id"), response.data)
         self.assertIsNotNone(supplier_data.get("name"), response.data)
 
-    def test_sideloading_with_selected_fields_only(self):
+    def test_flat_sideloading_with_selected_fields_only(self):
         response = self.client.get(
             reverse("product-list"),
             data={
                 "sideload": "suppliers",
-                "fields": "name,supplier__name"
+                "fields": "name,supplier__name",
+                "flat": "true",
             },
             format="json"
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        expected_relation_names = ["products", "suppliers"]
-        self.assertEqual(set(expected_relation_names), set(response.data))
+        self.assertEqual(1, len(response.data))
+        flat_product_data = response.data[0]
+        # product data
+        self.assertIsNone(flat_product_data.get("id"), response.data)
+        self.assertIsNotNone(flat_product_data.get("name"), response.data)
+        self.assertIsNone(flat_product_data.get("category"), response.data)
+        self.assertIsNone(flat_product_data.get("supplier"), response.data)
+        self.assertIsNone(flat_product_data.get("partners"), response.data)
+        # supplier
+        self.assertIsNone(flat_product_data.get("supplier__id"), response.data)
+        self.assertIsNotNone(flat_product_data.get("supplier__name"), response.data)
 
-        self.assertEqual(1, len(response.data.get("products")))
-        product_data = response.data.get("products")[0]
-        self.assertEqual(1, len(product_data), response.data)
-        self.assertIsNone(product_data.get("id"), response.data)
-        self.assertIsNotNone(product_data.get("name"), response.data)
-        self.assertIsNone(product_data.get("supplier"), response.data)
+    def test_flat_with_selected_fields_only(self):
+        response = self.client.get(
+            reverse("product-list"),
+            data={
+                "fields": "name,supplier,supplier__name",
+                "flat": "true",
+            },
+            format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(1, len(response.data.get("suppliers")))
-        supplier_data = response.data.get("suppliers")[0]
-        self.assertEqual(1, len(supplier_data))
-        self.assertIsNone(product_data.get("id"), response.data)
-        self.assertIsNotNone(supplier_data.get("name"), response.data)
+        self.assertEqual(1, len(response.data))
+        flat_product_data = response.data[0]
+        # product data
+        self.assertIsNone(flat_product_data.get("id"), response.data)
+        self.assertIsNotNone(flat_product_data.get("name"), response.data)
+        self.assertIsNone(flat_product_data.get("category"), response.data)
+        self.assertIsNotNone(flat_product_data.get("supplier"), response.data)
+        self.assertIsNone(flat_product_data.get("partners"), response.data)
+        # supplier
+        self.assertIsNone(flat_product_data.get("supplier__id"), response.data)
+        self.assertIsNone(flat_product_data.get("supplier__name"), response.data)
 
 
 ###################################

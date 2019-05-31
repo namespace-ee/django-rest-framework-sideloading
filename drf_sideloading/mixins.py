@@ -24,12 +24,16 @@ class SideloadableRelationsMixin(object):
     _primary_field_name = None
     _sideloadable_fields = None
     relations_to_sideload = None
+    related_keys_for_flattening = None
+    relations_to_pop = []
 
     def __init__(self, **kwargs):
         self.check_sideloading_serializer_class()
         self._primary_field_name = self.get_primary_field_name()
         self._sideloadable_fields = self.get_sideloadable_fields()
         self._prefetches = self.get_sideloading_prefetches()
+        self.related_keys_for_flattening = None
+        self.relations_to_pop = []
         super(SideloadableRelationsMixin, self).__init__(**kwargs)
 
     def check_sideloading_serializer_class(self):
@@ -158,16 +162,17 @@ class SideloadableRelationsMixin(object):
 
     def add_related_keys_for_flattening(self):
         relation_fields = []
+        self.related_keys_for_flattening = defaultdict(dict)
         # add relations to be able to flatten the data
         # TODO: find a way to remove these after flattening, in case they are not in the "allowed_fields"
 
         primary_serializer = self.sideloading_serializer_class._declared_fields[self._primary_field_name].child
         for relation in self.relations_to_sideload:
             sl_related_serializer = self.sideloading_serializer_class._declared_fields[relation].child
+            primary_key = sl_related_serializer.source or relation
 
             # find the relation key that the primary model points to (id, url, slug ect.. )
-
-            relation_field = primary_serializer.fields[sl_related_serializer.source or relation]
+            relation_field = primary_serializer.fields[primary_key]
 
             if isinstance(relation_field, PrimaryKeyRelatedField):
                 relation_key = relation_field.pk_field or relation_field.queryset.model._meta.pk.name
@@ -201,8 +206,9 @@ class SideloadableRelationsMixin(object):
             else:
                 raise RuntimeError("No relation found between primary and sideloadable serializers.")
 
+            relation_fields.append("{}__{}".format(self._primary_field_name, primary_key))
             relation_fields.append("{}__{}".format(relation, relation_key))
-            relation_fields.append("{}__{}".format(self._primary_field_name, sl_related_serializer.source or relation))
+            self.related_keys_for_flattening[relation][primary_key] = relation_key
 
         return relation_fields
 
@@ -213,17 +219,20 @@ class SideloadableRelationsMixin(object):
         flatten = kwargs.pop("flatten", False)
 
         if sideloading:
+            required_fields = None
+            if flatten:
+                # add relations to be able to flatten the data after
+                required_fields = self.add_related_keys_for_flattening()
 
             allowed_fields = kwargs.pop('allowed_fields', None)
             if allowed_fields:
-
                 # rename fields to be the same as in the default serializer.
                 fields_mapping = self.flatmap_sideloaded_serializer_fields()
-                kwargs["allowed_fields"] = [fields_mapping[field] for field in allowed_fields if field in fields_mapping]
-
-                if flatten:
-                    # add relations to be able to flatten the data after
-                    kwargs["required_fields"] = self.add_related_keys_for_flattening()
+                kwargs["allowed_fields"] = [fields_mapping[field] for field in allowed_fields if
+                                            field in fields_mapping]
+                if required_fields:
+                    kwargs["required_fields"] = required_fields
+                    self.relations_to_pop = set(kwargs["required_fields"]) - set(kwargs["allowed_fields"])
 
             # get context
             context = self.get_serializer_context()
@@ -265,7 +274,7 @@ class SideloadableRelationsMixin(object):
             serializer = self.get_serializer(
                 instance=sideloadable_page,
                 sideloading=True,
-                flatten=False,
+                flatten=flatten,
                 fields_to_load=[self._primary_field_name] + list(self.relations_to_sideload),
                 context={"request": request},
             )
@@ -277,7 +286,7 @@ class SideloadableRelationsMixin(object):
             serializer = self.get_serializer(
                 instance=sideloadable_page,
                 sideloading=True,
-                flatten=False,
+                flatten=flatten,
                 fields_to_load=[self._primary_field_name] + list(self.relations_to_sideload),
                 context={"request": request},
             )
@@ -307,15 +316,24 @@ class SideloadableRelationsMixin(object):
     def flatten_sideloaded_data(self, serialized_data):
         primary_objects = serialized_data.pop(self._primary_field_name)
         sideloaded_data = defaultdict(dict)
-        relation_sources = {}
-        for relation in self.relations_to_sideload:
-            relation_sources[relation] = self.sideloading_serializer_class._declared_fields.get(relation).source
+        if not self.related_keys_for_flattening:
+            raise RuntimeError('related_keys_for_flattening is missing')
+
+        # self.related_keys_for_flattening[relation][primary_key] = relation_key
+
+        for relation, reference_keys in self.related_keys_for_flattening.items():
             for data in serialized_data[relation]:
-                sideloaded_data[relation][data["url"]] = self.flatten_data(data, relation_sources[relation])
+                for primary_key, sideloaded_ref in reference_keys.items():
+                    if "{}__{}".format(relation, sideloaded_ref) in self.relations_to_pop:
+                        key = data.pop(sideloaded_ref)
+                    else:
+                        key = data[sideloaded_ref]
+                    sideloaded_data[relation][key] = self.flatten_data(data, primary_key)
 
         for object in primary_objects:
-            for relation in self.relations_to_sideload:
-                object.update(sideloaded_data[relation][object.pop(relation_sources[relation])])
+            for relation, reference_keys in self.related_keys_for_flattening.items():
+                for primary_key, sideloaded_ref in reference_keys.items():
+                    object.update(sideloaded_data[relation][object.pop(primary_key)])
         return primary_objects
 
     def parse_query_param(self, sideload_parameter):
