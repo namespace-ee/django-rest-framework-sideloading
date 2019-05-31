@@ -3,7 +3,7 @@ from __future__ import unicode_literals
 import re
 from collections import defaultdict
 
-# import six
+import six
 import copy
 
 from itertools import chain
@@ -102,12 +102,10 @@ class SideloadableRelationsMixin(object):
             if v is not None:
                 if isinstance(v, list):
                     cleaned_prefetches[k] = v
-                elif isinstance(v, str):
+                elif isinstance(v, six.string_types):
                     cleaned_prefetches[k] = [v]
                 else:
-                    raise RuntimeError(
-                        "Sideloadable prefetch values must be presented either as a list or a string"
-                    )
+                    raise RuntimeError("Sideloadable prefetch values must be presented either as a list or a string")
         return cleaned_prefetches
 
     def initialize_request(self, request, *args, **kwargs):
