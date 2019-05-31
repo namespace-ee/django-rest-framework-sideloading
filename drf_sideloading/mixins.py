@@ -1,5 +1,6 @@
 from __future__ import unicode_literals
 
+import re
 from collections import defaultdict
 
 # import six
@@ -339,10 +340,13 @@ class SideloadableRelationsMixin(object):
                 for primary_key, sideloaded_ref in reference_keys.items():
                     primary_relation_value = object.pop(primary_key)
                     if isinstance(primary_relation_value, list):
-                        object[relation] = [
-                            sideloaded_data[relation][relation_value]
-                            for relation_value in primary_relation_value
-                        ]
+                        for i, relation_value in enumerate(primary_relation_value):
+                            val = sideloaded_data[relation][relation_value]
+                            xxx = {
+                                re.sub(r'^{}'.format(relation), '{}__{}'.format(relation, i), k, 1): v
+                                for k, v in val.items()
+                            }
+                            object.update(xxx)
                     else:
                         object.update(sideloaded_data[relation][primary_relation_value])
         return primary_objects
