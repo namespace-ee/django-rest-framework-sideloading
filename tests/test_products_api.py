@@ -305,7 +305,7 @@ class ProductSelectableDataTestCase(BaseTestCase):
     def test_flattening_many_to_many_with_selected_fields(self):
         response = self.client.get(
             reverse("product-list"),
-            data={"flat": "true", "sideload": "partners", "fields": "name,partners__name",},
+            data={"flat": "true", "sideload": "partners", "fields": "name,partners__name"},
             format="json"
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -324,6 +324,7 @@ class ProductSelectableDataTestCase(BaseTestCase):
         self.assertIsNotNone(flat_product_data.get("partners__0__name"), flat_product_data)
         self.assertIsNone(flat_product_data.get("partners__1__id"), flat_product_data)
         self.assertIsNotNone(flat_product_data.get("partners__1__name"), flat_product_data)
+
 
 ###################################
 # Different Correct usages of API #
