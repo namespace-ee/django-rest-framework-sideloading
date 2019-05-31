@@ -190,11 +190,11 @@ class ProductSideloadTestCase(BaseTestCase):
         self.assertIsNotNone(flat_product_data.get("category"), flat_product_data)
         self.assertIsNotNone(flat_product_data.get("supplier"), flat_product_data)
         # partners
-        partners = flat_product_data.get("partners")
-        self.assertIsNotNone(partners, partners)
-        self.assertEqual(2, len(partners))
-        self.assertSetEqual(set(partners[0].keys()), {'partners__id', 'partners__name'}, partners[0])
-        self.assertSetEqual(set(partners[1].keys()), {'partners__id', 'partners__name'}, partners[1])
+        self.assertIsNone(flat_product_data.get("partners"), flat_product_data)
+        self.assertIsNotNone(flat_product_data.get("partners__0__id"), flat_product_data)
+        self.assertIsNotNone(flat_product_data.get("partners__0__name"), flat_product_data)
+        self.assertIsNotNone(flat_product_data.get("partners__1__id"), flat_product_data)
+        self.assertIsNotNone(flat_product_data.get("partners__1__name"), flat_product_data)
 
 
 class ProductSelectableDataTestCase(BaseTestCase):
@@ -317,12 +317,13 @@ class ProductSelectableDataTestCase(BaseTestCase):
         self.assertIsNotNone(flat_product_data.get("name"), flat_product_data)
         self.assertIsNone(flat_product_data.get("category"), flat_product_data)
         self.assertIsNone(flat_product_data.get("supplier"), flat_product_data)
+
         # partners
-        partners = flat_product_data.get("partners")
-        self.assertIsNotNone(partners, partners)
-        self.assertEqual(2, len(partners))
-        self.assertSetEqual(set(partners[0].keys()), {'partners__name'}, partners[0])
-        self.assertSetEqual(set(partners[1].keys()), {'partners__name'}, partners[1])
+        self.assertIsNone(flat_product_data.get("partners"), flat_product_data)
+        self.assertIsNone(flat_product_data.get("partners__0__id"), flat_product_data)
+        self.assertIsNotNone(flat_product_data.get("partners__0__name"), flat_product_data)
+        self.assertIsNone(flat_product_data.get("partners__1__id"), flat_product_data)
+        self.assertIsNotNone(flat_product_data.get("partners__1__name"), flat_product_data)
 
 ###################################
 # Different Correct usages of API #
