@@ -1,3 +1,4 @@
 django>=2.1,<2.2
 djangorestframework>=3.9,<3.10
 django-debug-toolbar
+six
