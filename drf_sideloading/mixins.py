@@ -7,7 +7,7 @@ import copy
 
 from itertools import chain
 
-from rest_framework.relations import RelatedField, PrimaryKeyRelatedField, HyperlinkedRelatedField, SlugRelatedField, \
+from rest_framework.relations import PrimaryKeyRelatedField, HyperlinkedRelatedField, SlugRelatedField, \
     HyperlinkedIdentityField
 from rest_framework.renderers import BrowsableAPIRenderer
 from rest_framework.response import Response
@@ -139,7 +139,8 @@ class SideloadableRelationsMixin(object):
         def flatmap_serializer_fields(serializer, original_tail, tail):
             for field in serializer.Meta.fields:
                 field_serializer = serializer.fields.get(field)
-                flat_source = (getattr(field_serializer, "source", None) or field).replace('.', '__').replace('*', field)
+                source = getattr(field_serializer, "source", None)
+                flat_source = (source or field).replace('.', '__').replace('*', field)
 
                 new_tail = "{}__{}".format(tail or '', flat_source).lstrip("__")
                 new_original_tail = "{}__{}".format(original_tail or '', flat_source).lstrip("__")

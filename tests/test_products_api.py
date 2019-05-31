@@ -157,7 +157,7 @@ class ProductSideloadTestCase(BaseTestCase):
     def test_flattening(self):
         response = self.client.get(
             reverse("product-list"),
-            data={"flat": "true", "sideload": "suppliers",},
+            data={"flat": "true", "sideload": "suppliers"},
             format="json"
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
