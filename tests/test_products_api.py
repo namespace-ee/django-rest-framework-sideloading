@@ -213,33 +213,6 @@ class ProductSelectableDataTestCase(BaseTestCase):
         self.assertIsNone(product_data.get("id"), response.data)
         self.assertIsNotNone(supplier_data.get("name"), response.data)
 
-    def test_sideloading_with_selected_fields_only(self):
-        response = self.client.get(
-            reverse("product-list"),
-            data={
-                "sideload": "suppliers",
-                "fields": "name,supplier__name"
-            },
-            format="json"
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        expected_relation_names = ["products", "suppliers"]
-        self.assertEqual(set(expected_relation_names), set(response.data))
-
-        self.assertEqual(1, len(response.data.get("products")))
-        product_data = response.data.get("products")[0]
-        self.assertEqual(1, len(product_data), response.data)
-        self.assertIsNone(product_data.get("id"), response.data)
-        self.assertIsNotNone(product_data.get("name"), response.data)
-        self.assertIsNone(product_data.get("supplier"), response.data)
-
-        self.assertEqual(1, len(response.data.get("suppliers")))
-        supplier_data = response.data.get("suppliers")[0]
-        self.assertEqual(1, len(supplier_data))
-        self.assertIsNone(product_data.get("id"), response.data)
-        self.assertIsNotNone(supplier_data.get("name"), response.data)
-
 
 ###################################
 # Different Correct usages of API #
