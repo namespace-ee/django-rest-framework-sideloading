@@ -5,8 +5,6 @@ import copy
 
 from itertools import chain
 
-from rest_framework.relations import RelatedField, PrimaryKeyRelatedField, HyperlinkedRelatedField, SlugRelatedField, \
-    HyperlinkedIdentityField
 from rest_framework.renderers import BrowsableAPIRenderer
 from rest_framework.response import Response
 from rest_framework.serializers import ListSerializer, ModelSerializer
@@ -153,61 +151,10 @@ class SideloadableRelationsMixin(object):
 
         return fields_mapping
 
-    def add_related_keys_for_flattening(self):
-        relation_fields = []
-        # add relations to be able to flatten the data
-        # TODO: find a way to remove these after flattening, in case they are not in the "allowed_fields"
-
-        primary_serializer = self.sideloading_serializer_class._declared_fields[self._primary_field_name].child
-        for relation in self.relations_to_sideload:
-            sl_related_serializer = self.sideloading_serializer_class._declared_fields[relation].child
-
-            # find the relation key that the primary model points to (id, url, slug ect.. )
-
-            relation_field = primary_serializer.fields[sl_related_serializer.source or relation]
-
-            if isinstance(relation_field, PrimaryKeyRelatedField):
-                relation_key = relation_field.pk_field or relation_field.queryset.model._meta.pk.name
-                if relation_key not in sl_related_serializer.Meta.fields:
-                    for field, field_serializer in sl_related_serializer._declared_fields.items():
-                        if field_serializer.source == relation_key:
-                            relation_key = field
-                            break
-                    else:
-                        raise RuntimeError("PrimaryKey related Sideloadable serializers must have a primary key field!")
-
-            elif isinstance(relation_field, SlugRelatedField):
-                relation_key = relation_field.slug_field
-                if relation_key not in sl_related_serializer.Meta.fields:
-                    for field, field_serializer in sl_related_serializer._declared_fields.items():
-                        if field_serializer.source == relation_key:
-                            relation_key = field
-                            break
-                    else:
-                        raise RuntimeError("SlugRelated related Sideloadable serializers must have a field with value!")
-
-            elif isinstance(relation_field, HyperlinkedRelatedField):
-                for field, field_serializer in sl_related_serializer._declared_fields.items():
-                    if isinstance(field_serializer, HyperlinkedIdentityField):
-                        relation_key = field
-                        break
-                else:
-                    raise RuntimeError(
-                        "Hyperlink related Sideloadable serializers must have a HyperlinkedIdentityField"
-                    )
-            else:
-                raise RuntimeError("No relation found between primary and sideloadable serializers.")
-
-            relation_fields.append("{}__{}".format(relation, relation_key))
-            relation_fields.append("{}__{}".format(self._primary_field_name, sl_related_serializer.source or relation))
-
-        return relation_fields
-
     def get_serializer(self, *args, **kwargs):
         # in order to use SelectableFieldsMixin, we must be able to pass "allowed_fields" through to the serializer
 
         sideloading = kwargs.pop("sideloading", False)
-        flatten = kwargs.pop("flatten", False)
 
         if sideloading:
 
@@ -217,10 +164,6 @@ class SideloadableRelationsMixin(object):
                 # rename fields to be the same as in the default serializer.
                 fields_mapping = self.flatmap_sideloaded_serializer_fields()
                 kwargs["allowed_fields"] = [fields_mapping[field] for field in allowed_fields if field in fields_mapping]
-
-                if flatten:
-                    # add relations to be able to flatten the data after
-                    kwargs["required_fields"] = self.add_related_keys_for_flattening()
 
             # get context
             context = self.get_serializer_context()
@@ -260,7 +203,6 @@ class SideloadableRelationsMixin(object):
             serializer = self.get_serializer(
                 instance=sideloadable_page,
                 sideloading=True,
-                flatten=False,
                 fields_to_load=[self._primary_field_name] + list(self.relations_to_sideload),
                 context={"request": request},
             )
@@ -270,7 +212,6 @@ class SideloadableRelationsMixin(object):
             serializer = self.get_serializer(
                 instance=sideloadable_page,
                 sideloading=True,
-                flatten=False,
                 fields_to_load=[self._primary_field_name] + list(self.relations_to_sideload),
                 context={"request": request},
             )
