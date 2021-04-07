@@ -1,12 +1,16 @@
 # Changelog
 
+## 1.3.1 (2021-04-07)
+
+Added support for `django.db.models.Prefetch`
+
 ## 1.3.0 (2019-04-23)
 
 Fix empty related fields sideloading bug
 
 - Support for Django 2.2
 
-## 1.0.0 (2018-10-29)
+## 1.2.0 (2018-10-29)
 
 Completely refactored sideloading configuration via a custom serializer.
 
