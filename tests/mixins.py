@@ -1,6 +1,6 @@
 class OtherMixin(object):
-    """ Mixin for testing purposes
-        Check if `self.action` attribute is availavle
+    """Mixin for testing purposes
+    Check if `self.action` attribute is availavle
     """
 
     def get_serializer_class(self):

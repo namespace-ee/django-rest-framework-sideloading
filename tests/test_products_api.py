@@ -30,9 +30,7 @@ class BaseTestCase(TestCase):
         partner1 = Partner.objects.create(name="Partner1")
         partner2 = Partner.objects.create(name="Partner2")
 
-        product = Product.objects.create(
-            name="Product", category=category, supplier=supplier
-        )
+        product = Product.objects.create(name="Product", category=category, supplier=supplier)
         product.partners.add(partner1)
         product.partners.add(partner2)
         product.save()
@@ -71,9 +69,7 @@ class ProductSideloadTestCase(BaseTestCase):
 
     def test_list_sideloading(self):
         """Test sideloading for all defined relations"""
-        response = self.client.get(
-            reverse("product-list"), {"sideload": "categories,suppliers,partners"}
-        )
+        response = self.client.get(reverse("product-list"), {"sideload": "categories,suppliers,partners"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         expected_relation_names = ["products", "categories", "suppliers", "partners"]
@@ -83,9 +79,7 @@ class ProductSideloadTestCase(BaseTestCase):
 
     def test_list_partial_sideloading(self):
         """Test sideloading for all defined relations"""
-        response = self.client.get(
-            reverse("product-list"), {"sideload": "suppliers,partners"}
-        )
+        response = self.client.get(reverse("product-list"), {"sideload": "suppliers,partners"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         expected_relation_names = ["products", "suppliers", "partners"]
@@ -109,9 +103,7 @@ class ProductSideloadTestCase(BaseTestCase):
         self.assertEqual("Product", response.data[0]["name"])
 
     def test_sideload_param_nonexistent_mixed_existing_relation(self):
-        response = self.client.get(
-            reverse("product-list"), {"sideload": "nonexistent,suppliers"}
-        )
+        response = self.client.get(reverse("product-list"), {"sideload": "nonexistent,suppliers"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         expected_relation_names = ["products", "suppliers"]
@@ -133,9 +125,7 @@ class ProductSideloadTestCase(BaseTestCase):
 
     def test_sideloading_partner_product_use_primary_list(self):
         """use primary model as a sideload relation request should not fail"""
-        response = self.client.get(
-            reverse("product-list"), {"sideload": "partners,products"}
-        )
+        response = self.client.get(reverse("product-list"), {"sideload": "partners,products"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         expected_relation_names = ["products", "partners"]
@@ -157,9 +147,7 @@ class CategorySideloadTestCase(BaseTestCase):
 
     def test_list_sideloading_with_reverse_relations_and_its_relations(self):
         """Test sideloading for all defined relations"""
-        response = self.client.get(
-            reverse("category-list"), {"sideload": "products,suppliers,partners"}
-        )
+        response = self.client.get(reverse("category-list"), {"sideload": "products,suppliers,partners"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         expected_relation_names = ["categories", "products", "suppliers", "partners"]
@@ -167,14 +155,10 @@ class CategorySideloadTestCase(BaseTestCase):
         self.assertEqual(4, len(response.data))
         self.assertListEqual(expected_relation_names, list(response.data.keys()))
 
-    def test_list_sideloading_with_reverse_relations_relations_without_the_reverse_relation_itself(
-        self
-    ):
+    def test_list_sideloading_with_reverse_relations_relations_without_the_reverse_relation_itself(self):
         """Test sideloading for related items to products, that are related to the categories
         while the products list itself is not sideloaded"""
-        response = self.client.get(
-            reverse("category-list"), {"sideload": "suppliers,partners"}
-        )
+        response = self.client.get(reverse("category-list"), {"sideload": "suppliers,partners"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         expected_relation_names = ["categories", "suppliers", "partners"]
@@ -241,9 +225,7 @@ class TestDrfSideloadingNoPrimaryDefined(TestCase):
                 format="json",
             )
 
-        expected_error_message = (
-            "Sideloadable serializer must have a Meta attribute called primary!"
-        )
+        expected_error_message = "Sideloadable serializer must have a Meta attribute called primary!"
 
         raised_exception = cm.exception
         self.assertEqual(str(raised_exception), expected_error_message)
@@ -274,9 +256,7 @@ class TestDrfSideloadingRelationsNotListSerializers(TestCase):
                 data={"sideload": "categories,suppliers,partners"},
             )
 
-        expected_error_message = (
-            "SideLoadable field 'categories' must be set as many=True"
-        )
+        expected_error_message = "SideLoadable field 'categories' must be set as many=True"
 
         raised_exception = cm.exception
         self.assertEqual(str(raised_exception), expected_error_message)
@@ -345,9 +325,7 @@ class TestDrfSideloadingInvalidPrefetchesType(TestCase):
                 format="json",
             )
 
-        expected_error_message = (
-            "Sideloadable serializer Meta attribute 'prefetches' must be a dict."
-        )
+        expected_error_message = "Sideloadable serializer Meta attribute 'prefetches' must be a dict."
 
         raised_exception = cm.exception
         self.assertEqual(str(raised_exception), expected_error_message)
@@ -418,9 +396,7 @@ class TestDrfSideloadingValidPrefetches(TestCase):
             format="json",
         )
 
-        response = self.client.get(
-            reverse("product-list"), {"sideload": "categories,suppliers,partners"}
-        )
+        response = self.client.get(reverse("product-list"), {"sideload": "categories,suppliers,partners"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         expected_relation_names = ["products", "categories", "suppliers", "partners"]
@@ -444,9 +420,7 @@ class TestDrfSideloadingBrowsableApiPermissions(TestCase):
                 return True
 
             def has_object_permission(self, request, view, obj):
-                raise RuntimeError(
-                    "This must not be called, when sideloadading is used!"
-                )
+                raise RuntimeError("This must not be called, when sideloadading is used!")
 
         class ProductSideloadableSerializer(SideLoadableSerializer):
             products = ProductSerializer(many=True)
@@ -473,9 +447,7 @@ class TestDrfSideloadingBrowsableApiPermissions(TestCase):
         super(TestDrfSideloadingBrowsableApiPermissions, cls).tearDownClass()
 
     def test_sideloading_does_not_render_forms_and_check_object_permissions(self):
-        response = self.client.get(
-            reverse("product-list"), data={"sideload": "categories,suppliers,partners"}
-        )
+        response = self.client.get(reverse("product-list"), data={"sideload": "categories,suppliers,partners"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         expected_relation_names = ["products", "categories", "suppliers", "partners"]
@@ -496,7 +468,7 @@ class TestDrfSideloadingBrowsableApiPermissions(TestCase):
                 "supplier": supplier.id,
                 "partners": [],
             },
-            **headers
+            **headers,
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(isinstance(response.data, dict))
@@ -507,16 +479,14 @@ class TestDrfSideloadingBrowsableApiPermissions(TestCase):
 
         headers = {"HTTP_ACCEPT": "application/json"}
         response = self.client.post(
-            "{}{}".format(
-                reverse("product-list"), "?sideload=categories,suppliers,partners"
-            ),
+            "{}{}".format(reverse("product-list"), "?sideload=categories,suppliers,partners"),
             data={
                 "name": "Random product",
                 "category": category.id,
                 "supplier": supplier.id,
                 "partners": [],
             },
-            **headers
+            **headers,
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(isinstance(response.data, dict))
@@ -553,39 +523,23 @@ class ProductSideloadSameSourceDuplicationTestCase(BaseTestCase):
 
         expected_relation_names = ["products", "categories"]
 
-        self.assertSetEqual(
-            set(response.data.serializer.instance.keys()), {"products", "category"}
-        )
-        self.assertSetEqual(
-            set(dict(response.data).keys()), set(expected_relation_names)
-        )
+        self.assertSetEqual(set(response.data.serializer.instance.keys()), {"products", "category"})
+        self.assertSetEqual(set(dict(response.data).keys()), set(expected_relation_names))
 
     def test_list_sideload_old_categories(self):
-        response = self.client.get(
-            reverse("product-list"), {"sideload": "old_categories"}
-        )
+        response = self.client.get(reverse("product-list"), {"sideload": "old_categories"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         expected_relation_names = ["products", "old_categories"]
 
-        self.assertSetEqual(
-            set(response.data.serializer.instance.keys()), {"products", "category"}
-        )
-        self.assertSetEqual(
-            set(dict(response.data).keys()), set(expected_relation_names)
-        )
+        self.assertSetEqual(set(response.data.serializer.instance.keys()), {"products", "category"})
+        self.assertSetEqual(set(dict(response.data).keys()), set(expected_relation_names))
 
     def test_list_sideload_new_categories_and_old_categories(self):
-        response = self.client.get(
-            reverse("product-list"), {"sideload": "categories,old_categories"}
-        )
+        response = self.client.get(reverse("product-list"), {"sideload": "categories,old_categories"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         expected_relation_names = ["products", "categories", "old_categories"]
 
-        self.assertSetEqual(
-            set(response.data.serializer.instance.keys()), {"products", "category"}
-        )
-        self.assertSetEqual(
-            set(dict(response.data).keys()), set(expected_relation_names)
-        )
+        self.assertSetEqual(set(response.data.serializer.instance.keys()), {"products", "category"})
+        self.assertSetEqual(set(dict(response.data).keys()), set(expected_relation_names))

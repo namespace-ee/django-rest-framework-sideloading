@@ -15,10 +15,6 @@ class Partner(models.Model):
 
 class Product(models.Model):
     name = models.CharField(max_length=255)
-    category = models.ForeignKey(
-        Category, related_name="products", on_delete=models.CASCADE
-    )
-    supplier = models.ForeignKey(
-        Supplier, related_name="products", on_delete=models.CASCADE
-    )
+    category = models.ForeignKey(Category, related_name="products", on_delete=models.CASCADE)
+    supplier = models.ForeignKey(Supplier, related_name="products", on_delete=models.CASCADE)
     partners = models.ManyToManyField(Partner, related_name="products", blank=True)
