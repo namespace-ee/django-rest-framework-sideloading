@@ -5,6 +5,7 @@ import copy
 
 from itertools import chain
 
+from django.db.models import Prefetch
 from rest_framework.renderers import BrowsableAPIRenderer
 from rest_framework.response import Response
 from rest_framework.serializers import ListSerializer
@@ -90,14 +91,11 @@ class SideloadableRelationsMixin(object):
         cleaned_prefetches = {}
         for k, v in prefetches.items():
             if v is not None:
-                if isinstance(v, list):
-                    cleaned_prefetches[k] = v
-                elif isinstance(v, six.string_types):
-                    cleaned_prefetches[k] = [v]
-                else:
-                    raise RuntimeError(
-                        "Sideloadable prefetch values must be presented either as a list or a string"
-                    )
+                if not isinstance(v, list):
+                    v = [v]
+                for vi in v:
+                    if not isinstance(vi, (six.string_types, Prefetch)):
+                        raise RuntimeError("Sideloadable prefetch values must be a list of strings or Prefetch objects")
         return cleaned_prefetches
 
     def initialize_request(self, request, *args, **kwargs):

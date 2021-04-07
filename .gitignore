@@ -4,6 +4,7 @@ db.sqlite3
 *.py[cod]
 __pycache__
 env
+venv
 .python-version
 
 # C extensions

@@ -3,6 +3,7 @@
 
 from __future__ import unicode_literals
 
+from django.db.models import Prefetch
 from rest_framework.permissions import BasePermission
 from rest_framework.renderers import BrowsableAPIRenderer, JSONRenderer
 from rest_framework.settings import api_settings
@@ -388,18 +389,13 @@ class TestDrfSideloadingInvalidPrefetchesValuesType(TestCase):
         ProductViewSet.sideloading_serializer_class = ProductSideloadableSerializer
 
     def test_correct_exception_raised(self):
-        with self.assertRaises(RuntimeError) as cm:
+        expected_error_message = "Sideloadable prefetch values must be a list of strings or Prefetch objects"
+        with self.assertRaisesMessage(RuntimeError, expected_error_message):
             self.client.get(
                 reverse("product-list"),
                 data={"sideload": "categories,suppliers,partners"},
                 format="json",
             )
-
-        expected_error_message = "Sideloadable prefetch values must be presented either as a list or a string"
-
-        raised_exception = cm.exception
-        self.assertEqual(str(raised_exception), expected_error_message)
-
 
 class TestDrfSideloadingValidPrefetches(TestCase):
     """Run tests while including mixin but not defining sideloading"""
@@ -412,6 +408,7 @@ class TestDrfSideloadingValidPrefetches(TestCase):
             products = ProductSerializer(many=True)
             categories = CategorySerializer(source="category", many=True)
             suppliers = SupplierSerializer(source="supplier", many=True)
+            suppliers_ordered_by_name = SupplierSerializer(source="supplier", many=True)
             partners = PartnerSerializer(many=True)
 
             class Meta:
@@ -419,6 +416,7 @@ class TestDrfSideloadingValidPrefetches(TestCase):
                 prefetches = {
                     "categories": "category",
                     "suppliers": ["supplier"],
+                    "suppliers_ordered_by_name": Prefetch("supplier", queryset=Supplier.objects.order_by("name")),
                     "partners": None,
                 }
 
@@ -427,7 +425,7 @@ class TestDrfSideloadingValidPrefetches(TestCase):
     def test_sideloading_with_prefetches(self):
         self.client.get(
             reverse("product-list"),
-            data={"sideload": "categories,suppliers,partners"},
+            data={"sideload": "categories,suppliers,suppliers_ordered_by_name,partners"},
             format="json",
         )
 
