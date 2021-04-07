@@ -6,6 +6,7 @@
 [![Code style Black](https://img.shields.io/badge/code%20style-black-000000.svg?maxAge=2592000)](https://github.com/ambv/black)
 
 :warning: Note that there are major API changes since version 0.1.1 that have to be taken into account when upgrading!
+:warning: Python 2 and Django 1.11 are no longer supported from version 1.4.0!
 
 # Django rest framework sideloading
 
@@ -145,10 +146,11 @@ $ make tox
 
 ```shell
 $ tox --listenvs
-py27-django18-drf34
-py27-django19-drf34
+py37-django22-drf39
+py38-django31-drf311
+py39-django32-drf312
 # ...
-$ tox -e py27-django19-drf34
+$ tox -e py39-django32-drf312
 ```
 
 #### Test coverage
