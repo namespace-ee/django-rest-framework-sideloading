@@ -8,43 +8,42 @@ class Migration(migrations.Migration):
 
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='Category',
+            name="Category",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=255)),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("name", models.CharField(max_length=255)),
             ],
         ),
         migrations.CreateModel(
-            name='Partner',
+            name="Partner",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=255)),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("name", models.CharField(max_length=255)),
             ],
         ),
         migrations.CreateModel(
-            name='Product',
+            name="Product",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=255)),
-                ('category', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='products.Category')),
-                ('partners', models.ManyToManyField(to='products.Partner')),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("name", models.CharField(max_length=255)),
+                ("category", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="products.Category")),
+                ("partners", models.ManyToManyField(to="products.Partner")),
             ],
         ),
         migrations.CreateModel(
-            name='Supplier',
+            name="Supplier",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=255)),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("name", models.CharField(max_length=255)),
             ],
         ),
         migrations.AddField(
-            model_name='product',
-            name='supplier',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='products.Supplier'),
+            model_name="product",
+            name="supplier",
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="products.Supplier"),
         ),
     ]
