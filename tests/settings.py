@@ -1,6 +1,3 @@
-import django
-
-
 DEBUG = True
 USE_TZ = True
 XXXXXXX = True

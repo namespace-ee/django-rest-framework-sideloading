@@ -1,5 +1,4 @@
 import copy
-
 from itertools import chain
 
 from django.db.models import Prefetch
