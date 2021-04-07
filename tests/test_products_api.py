@@ -385,6 +385,7 @@ class TestDrfSideloadingInvalidPrefetchesValuesType(TestCase):
                 format="json",
             )
 
+
 class TestDrfSideloadingValidPrefetches(TestCase):
     """Run tests while including mixin but not defining sideloading"""
 
