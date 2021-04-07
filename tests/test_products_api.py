@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 from django.db.models import Prefetch
 from django.test import TestCase
 from django.urls import reverse
