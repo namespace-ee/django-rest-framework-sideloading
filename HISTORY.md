@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.0 (2021-04-07)
+
+- Renewed **Python** supported versions `3.6 -> 3.9`
+- Renewed **Django** supported versions `2.2`, `3.1`, `3.2`
+- Renewed **Django-rest-framework** supported versions. `3.9 -> 3.12`
+
 ## 1.3.1 (2021-04-07)
 
 Added support for `django.db.models.Prefetch`

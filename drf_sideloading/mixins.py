@@ -1,6 +1,3 @@
-from __future__ import unicode_literals
-
-import six
 import copy
 
 from itertools import chain
@@ -94,7 +91,7 @@ class SideloadableRelationsMixin(object):
                 if not isinstance(v, list):
                     v = [v]
                 for vi in v:
-                    if not isinstance(vi, (six.string_types, Prefetch)):
+                    if not isinstance(vi, (str, Prefetch)):
                         raise RuntimeError("Sideloadable prefetch values must be a list of strings or Prefetch objects")
         return cleaned_prefetches
 

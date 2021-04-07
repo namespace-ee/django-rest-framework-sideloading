@@ -1,7 +1,3 @@
-# -*- coding: utf-8
-from __future__ import unicode_literals
-
-
 class OtherMixin(object):
     """ Mixin for testing purposes
         Check if `self.action` attribute is availavle

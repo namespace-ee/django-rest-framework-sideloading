@@ -1,19 +1,13 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-from __future__ import unicode_literals
-
 from django.db.models import Prefetch
+from django.test import TestCase
+from django.urls import reverse
+from rest_framework import status, serializers
 from rest_framework.permissions import BasePermission
 from rest_framework.renderers import BrowsableAPIRenderer, JSONRenderer
 from rest_framework.settings import api_settings
 
 from drf_sideloading.serializers import SideLoadableSerializer
-from tests import DJANGO_20
-
-from django.test import TestCase
-from rest_framework import status, serializers
-
 from tests.models import Category, Supplier, Product, Partner
 from tests.serializers import (
     ProductSerializer,
@@ -22,11 +16,6 @@ from tests.serializers import (
     PartnerSerializer,
 )
 from tests.viewsets import ProductViewSet
-
-if DJANGO_20:
-    from django.urls import reverse
-else:
-    from django.core.urlresolvers import reverse
 
 
 class BaseTestCase(TestCase):

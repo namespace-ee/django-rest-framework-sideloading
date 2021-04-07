@@ -145,10 +145,11 @@ $ make tox
 
 ```shell
 $ tox --listenvs
-py27-django18-drf34
-py27-django19-drf34
+py37-django22-drf39
+py38-django31-drf311
+py39-django32-drf312
 # ...
-$ tox -e py27-django19-drf34
+$ tox -e py39-django32-drf312
 ```
 
 #### Test coverage
