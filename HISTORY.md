@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.1 (2021-04-09)
+
+- Fix sideloadable prefetches
+
 ## 1.4.0 (2021-04-07)
 
 - Python supported versions `3.6 -> 3.9`

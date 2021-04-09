@@ -80,6 +80,7 @@ class SideloadableRelationsMixin(object):
                 for vi in v:
                     if not isinstance(vi, (str, Prefetch)):
                         raise RuntimeError("Sideloadable prefetch values must be a list of strings or Prefetch objects")
+                cleaned_prefetches[k] = v
         return cleaned_prefetches
 
     def initialize_request(self, request, *args, **kwargs):
