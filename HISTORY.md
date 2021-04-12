@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.2 (2021-04-12)
+
+- Add support for lists in filter_related_objects
+
 ## 1.4.1 (2021-04-09)
 
 - Fix sideloadable prefetches
