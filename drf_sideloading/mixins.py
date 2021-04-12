@@ -179,12 +179,18 @@ class SideloadableRelationsMixin(object):
 
     def filter_related_objects(self, related_objects, lookup):
         current_lookup, remaining_lookup = lookup.split("__", 1) if "__" in lookup else (lookup, None)
-        related_objects_set = {getattr(r, current_lookup) for r in related_objects} - {None}
-        if related_objects_set and next(iter(related_objects_set)).__class__.__name__ in [
-            "ManyRelatedManager",
-            "RelatedManager",
-        ]:
-            related_objects_set = set(chain(*[related_queryset.all() for related_queryset in related_objects_set]))
+        lookup_values = [getattr(r, current_lookup) for r in related_objects if getattr(r, current_lookup) is not None]
+
+        if lookup_values:
+            if lookup_values[0].__class__.__name__ in ["ManyRelatedManager", "RelatedManager"]:
+                related_objects_set = set(chain(*[related_queryset.all() for related_queryset in lookup_values]))
+            elif isinstance(lookup_values[0], list):
+                related_objects_set = set(chain(*[related_list for related_list in lookup_values]))
+            else:
+                related_objects_set = set(lookup_values)
+        else:
+            related_objects_set = set()
+
         if remaining_lookup:
             return self.filter_related_objects(related_objects_set, remaining_lookup)
         return set(related_objects_set) - {"", None}
