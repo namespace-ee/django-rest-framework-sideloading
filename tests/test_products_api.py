@@ -104,6 +104,39 @@ class ProductSideloadTestCase(BaseTestCase):
         self.assertIsInstance(response.json(), dict)
         self.assertListEqual(["products", "suppliers", "partners"], list(response.json().keys()))
 
+    def test_detail(self):
+        response = self.client.get(path=reverse("product-detail", args=[self.product1.id]), **self.DEFAULT_HEADERS)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsInstance(response.json(), dict)
+        self.assertListEqual(["name", "category", "supplier", "partners"], list(response.json().keys()))
+        # TODO: check details
+
+    def test_detail_sideloading(self):
+        """Test sideloading for all defined relations in detail view"""
+        response = self.client.get(
+            path=reverse("product-detail", args=[self.product1.id]),
+            data={"sideload": "categories,suppliers,partners"},
+            **self.DEFAULT_HEADERS,
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsInstance(response.json(), dict)
+        self.assertListEqual(["products", "categories", "suppliers", "partners"], list(response.json().keys()))
+        self.assertEqual(1, len(response.json().get("products")))
+        # TODO: check details
+
+    def test_detail_partial_sideloading(self):
+        """Test sideloading for selected relations in detail view"""
+        response = self.client.get(
+            path=reverse("product-detail", args=[self.product1.id]),
+            data={"sideload": "suppliers,partners"},
+            **self.DEFAULT_HEADERS,
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsInstance(response.json(), dict)
+        self.assertListEqual(["products", "suppliers", "partners"], list(response.json().keys()))
+        self.assertEqual(1, len(response.json().get("products")))
+        # TODO: check details
+
     # all negative test cases below only here
     def test_sideload_param_empty_string(self):
         response = self.client.get(path=reverse("product-list"), data={"sideload": ""}, **self.DEFAULT_HEADERS)

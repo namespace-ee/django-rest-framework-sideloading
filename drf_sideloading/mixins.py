@@ -145,6 +145,23 @@ class SideloadableRelationsMixin(object):
             )
             return Response(serializer.data)
 
+    def retrieve(self, request, *args, **kwargs):
+        sideload_params = self.parse_query_param(sideload_parameter=request.query_params.get(self.query_param_name, ""))
+
+        # Do not sideload unless params and GET method
+        if request.method != "GET" or not sideload_params:
+            return super(SideloadableRelationsMixin, self).retrieve(request, *args, **kwargs)
+
+        # return object with sideloading serializer
+        queryset = self.get_sideloadable_object_as_queryset()
+        sideloadable_page = self.get_sideloadable_page_from_queryset(queryset)
+        serializer = self.sideloading_serializer_class(
+            instance=sideloadable_page,
+            fields_to_load=[self._primary_field_name] + list(self.relations_to_sideload),
+            context={"request": request},
+        )
+        return Response(serializer.data)
+
     def parse_query_param(self, sideload_parameter):
         """
         Parse query param and take validated names
@@ -196,6 +213,41 @@ class SideloadableRelationsMixin(object):
             source = self._sideloadable_fields[relation].source or relation
             sideloadable_page[source] = self.filter_related_objects(related_objects=page, lookup=source)
         return sideloadable_page
+
+    def get_sideloadable_object_as_queryset(self):
+        """
+        mimics DRF original method get_object()
+        Returns the object the view is displaying with sideloaded models prefetched.
+
+        You may want to override this if you need to provide non-standard
+        queryset lookups.  Eg if objects are referenced using multiple
+        keyword arguments in the url conf.
+        """
+        # Add prefetches if applicable
+        queryset = self.get_queryset()
+        prefetch_relations = self.get_relevant_prefetches()
+        if prefetch_relations:
+            queryset = queryset.prefetch_related(*prefetch_relations)
+        queryset = self.filter_queryset(queryset)
+
+        # Perform the lookup filtering.
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+
+        assert lookup_url_kwarg in self.kwargs, (
+            "Expected view %s to be called with a URL keyword argument "
+            'named "%s". Fix your URL conf, or set the `.lookup_field` '
+            "attribute on the view correctly." % (self.__class__.__name__, lookup_url_kwarg)
+        )
+
+        filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
+        queryset = queryset.filter(**filter_kwargs)
+
+        # check single object fetched
+        obj = get_object_or_404(queryset)
+        # May raise a permission denied
+        self.check_object_permissions(self.request, obj)
+
+        return queryset
 
     def filter_related_objects(self, related_objects, lookup):
         current_lookup, remaining_lookup = lookup.split("__", 1) if "__" in lookup else (lookup, None)
