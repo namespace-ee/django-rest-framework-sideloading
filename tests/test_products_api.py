@@ -13,6 +13,7 @@ from tests.serializers import (
     CategorySerializer,
     SupplierSerializer,
     PartnerSerializer,
+    MultiSourceSupplierSerializer,
 )
 from tests.viewsets import ProductViewSet
 
@@ -180,6 +181,57 @@ class ProductSideloadTestCase(BaseTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsInstance(response.json(), dict)
         self.assertListEqual(["products", "partners"], list(response.json().keys()))
+
+
+class ProductMultiSourceSideloadTestCase(BaseTestCase):
+    """Test sideloading multiple related fields to a signle field"""
+
+    @classmethod
+    def setUpClass(cls):
+        super(ProductMultiSourceSideloadTestCase, cls).setUpClass()
+
+        class ProductSideloadableSerializer(SideLoadableSerializer):
+            products = ProductSerializer(many=True)
+            categories = CategorySerializer(source="category", many=True)
+            suppliers = MultiSourceSupplierSerializer(
+                sources=["supplier", "backup_supplier"], source="supplier", many=True
+            )
+            partners = PartnerSerializer(many=True)
+
+            class Meta:
+                primary = "products"
+                prefetches = {
+                    "categories": "category",
+                    "suppliers": ["supplier", "backup_supplier"],
+                    "partners": "partners",
+                }
+
+        ProductViewSet.sideloading_serializer_class = ProductSideloadableSerializer
+
+    def setUp(self):
+        super().setUp()
+        self.product1.backup_supplier = self.supplier4
+        self.product1.save()
+        self.product2.backup_supplier = self.supplier3
+        self.product2.save()
+        self.product3.backup_supplier = self.supplier2
+        self.product3.save()
+
+    def test_list_sideloading(self):
+        """Test sideloading for all defined relations"""
+        response = self.client.get(
+            path=reverse("product-list"),
+            data={"sideload": "categories,suppliers,partners", "search": self.product1.name},
+            **self.DEFAULT_HEADERS,
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsInstance(response.json(), dict)
+        self.assertListEqual(["products", "categories", "suppliers", "partners"], list(response.json().keys()))
+        self.assertEqual(1, len(response.json()["products"]))
+        self.assertSetEqual(
+            {self.product1.supplier.name, self.product1.backup_supplier.name},
+            {supplier["name"] for supplier in response.json()["suppliers"]},
+        )
 
 
 ###################################
@@ -418,9 +470,9 @@ class TestDrfSideloadingValidPrefetches(BaseTestCase):
             products = ProductSerializer(many=True)
             categories = CategorySerializer(source="category", many=True)
             suppliers = SupplierSerializer(source="supplier", many=True)
-            filtered_suppliers = SupplierSerializer(source="supplier", many=True)
+            filtered_suppliers = SupplierSerializer(source="supplier", many=True, read_only=True)
             partners = PartnerSerializer(many=True)
-            filtered_partners = PartnerSerializer(source="partners", many=True)
+            filtered_partners = PartnerSerializer(source="partners", many=True, read_only=True)
 
             class Meta:
                 primary = "products"

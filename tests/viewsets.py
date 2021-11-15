@@ -1,4 +1,4 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, filters
 
 from drf_sideloading.mixins import SideloadableRelationsMixin
 from tests.mixins import OtherMixin
@@ -21,6 +21,12 @@ class ProductViewSet(SideloadableRelationsMixin, OtherMixin, viewsets.ModelViewS
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
     sideloading_serializer_class = ProductSideloadableSerializer
+    filter_backends = [
+        filters.SearchFilter,
+        # django_filters.rest_framework.DjangoFilterBackend,
+    ]
+    search_fields = ["name"]
+    # filter_fields = ["confirmed"]
 
     def get_serializer_class(self):
         # if no super is called sideloading should still work

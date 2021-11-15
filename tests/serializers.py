@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from drf_sideloading.mixins import MultiSourceSerializerMixin
 from drf_sideloading.serializers import SideLoadableSerializer
 from tests.models import Supplier, Category, Product, Partner
 
@@ -8,6 +9,10 @@ class SupplierSerializer(serializers.ModelSerializer):
     class Meta:
         model = Supplier
         fields = ["name"]
+
+
+class MultiSourceSupplierSerializer(MultiSourceSerializerMixin, SupplierSerializer):
+    pass
 
 
 class PartnerSerializer(serializers.ModelSerializer):

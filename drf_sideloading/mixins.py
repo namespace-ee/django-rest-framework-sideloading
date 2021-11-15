@@ -11,6 +11,16 @@ from drf_sideloading.renderers import BrowsableAPIRendererWithoutForms
 from drf_sideloading.serializers import SideLoadableSerializer
 
 
+class MultiSourceSerializerMixin:
+    sources = []
+
+    def __init__(self, sources, *args, **kwargs):
+        self.sources = sources
+        if sources and not kwargs.get("source"):
+            kwargs["source"] = sources[0]  # used only for ModelSerializer binding
+        super().__init__(*args, *kwargs)
+
+
 class SideloadableRelationsMixin(object):
     query_param_name = "sideload"
     sideloading_serializer_class = None
@@ -195,23 +205,42 @@ class SideloadableRelationsMixin(object):
         # this works wonders, but can't be used when page is paginated...
         sideloadable_page = {self._primary_field_name: queryset}
         for relation in self.relations_to_sideload:
+            field = self._sideloadable_fields[relation]
+            field_source = field.source or relation
+            rel_model = field.child.Meta.model
+
             if not isinstance(self._sideloadable_fields[relation], ListSerializer):
                 raise RuntimeError("SideLoadable field '{}' must be set as many=True".format(relation))
 
-            source = self._sideloadable_fields[relation].source or relation
-            rel_model = self._sideloadable_fields[relation].child.Meta.model
-            rel_qs = rel_model.objects.filter(pk__in=queryset.values_list(source, flat=True))
-            sideloadable_page[source] = rel_qs
+            if isinstance(field.child, MultiSourceSerializerMixin):
+                relation_ids = set()
+                for source in field.child.sources:
+                    relation_ids.update(set(queryset.values_list(source, flat=True)))
+                sideloadable_page[field_source] = rel_model.objects.filter(pk__in=relation_ids)
+            else:
+                relation_ids = queryset.values_list(field_source, flat=True)
+                sideloadable_page[field_source] = rel_model.objects.filter(pk__in=relation_ids)
+
         return sideloadable_page
 
     def get_sideloadable_page(self, page):
         sideloadable_page = {self._primary_field_name: page}
         for relation in self.relations_to_sideload:
-            if not isinstance(self._sideloadable_fields[relation], ListSerializer):
+            field = self._sideloadable_fields[relation]
+            field_source = field.source or relation
+            if not isinstance(field, ListSerializer):
                 raise RuntimeError("SideLoadable field '{}' must be set as many=True".format(relation))
 
-            source = self._sideloadable_fields[relation].source or relation
-            sideloadable_page[source] = self.filter_related_objects(related_objects=page, lookup=source)
+            if isinstance(field.child, MultiSourceSerializerMixin):
+                sideloadable_page[relation] = set()
+                if field_source not in sideloadable_page:
+                    sideloadable_page[field_source] = set()
+                for source in field.child.sources:
+                    sideloadable_page[field_source] |= self.filter_related_objects(related_objects=page, lookup=source)
+            else:
+                source = self._sideloadable_fields[relation].source or relation
+                sideloadable_page[source] = self.filter_related_objects(related_objects=page, lookup=source)
+
         return sideloadable_page
 
     def get_sideloadable_object_as_queryset(self):
