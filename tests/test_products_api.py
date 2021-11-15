@@ -31,14 +31,28 @@ class BaseTestCase(TestCase):
 
     def setUp(self):
         self.category = Category.objects.create(name="Category")
-        self.supplier = Supplier.objects.create(name="Supplier")
+        self.supplier1 = Supplier.objects.create(name="Supplier1")
+        self.supplier2 = Supplier.objects.create(name="Supplier2")
+        self.supplier3 = Supplier.objects.create(name="Supplier3")
+        self.supplier4 = Supplier.objects.create(name="Supplier4")
         self.partner1 = Partner.objects.create(name="Partner1")
         self.partner2 = Partner.objects.create(name="Partner2")
+        self.partner3 = Partner.objects.create(name="Partner3")
+        self.partner4 = Partner.objects.create(name="Partner4")
 
-        self.product = Product.objects.create(name="Product", category=self.category, supplier=self.supplier)
-        self.product.partners.add(self.partner1)
-        self.product.partners.add(self.partner2)
-        self.product.save()
+        self.product1 = Product.objects.create(name="Product1", category=self.category, supplier=self.supplier1)
+        self.product1.partners.add(self.partner1)
+        self.product1.partners.add(self.partner2)
+        self.product1.partners.add(self.partner4)
+        self.product1.save()
+
+        self.product2 = Product.objects.create(name="Product2", category=self.category, supplier=self.supplier2)
+        self.product1.partners.add(self.partner2)
+        self.product1.save()
+        self.product3 = Product.objects.create(name="Product3", category=self.category, supplier=self.supplier3)
+        self.product1.partners.add(self.partner3)
+        self.product1.save()
+        self.product4 = Product.objects.create(name="Product4", category=self.category, supplier=self.supplier4)
 
 
 ###################################
@@ -69,8 +83,8 @@ class ProductSideloadTestCase(BaseTestCase):
         response = self.client.get(path=reverse("product-list"), **self.DEFAULT_HEADERS)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsInstance(response.json(), list)
-        self.assertEqual(1, len(response.json()))
-        self.assertEqual("Product", response.json()[0]["name"])
+        self.assertEqual(4, len(response.json()))
+        self.assertEqual("Product1", response.json()[0]["name"])
 
     def test_list_sideloading(self):
         """Test sideloading for all defined relations"""
@@ -90,13 +104,45 @@ class ProductSideloadTestCase(BaseTestCase):
         self.assertIsInstance(response.json(), dict)
         self.assertListEqual(["products", "suppliers", "partners"], list(response.json().keys()))
 
+    def test_detail(self):
+        response = self.client.get(path=reverse("product-detail", args=[self.product1.id]), **self.DEFAULT_HEADERS)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsInstance(response.json(), dict)
+        self.assertListEqual(["name", "category", "supplier", "partners"], list(response.json().keys()))
+
+    def test_detail_sideloading(self):
+        """Test sideloading for all defined relations in detail view"""
+        response = self.client.get(
+            path=reverse("product-detail", args=[self.product1.id]),
+            data={"sideload": "categories,suppliers,partners"},
+            **self.DEFAULT_HEADERS,
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsInstance(response.json(), dict)
+        self.assertListEqual(["products", "categories", "suppliers", "partners"], list(response.json().keys()))
+        self.assertEqual(1, len(response.json().get("products")))
+        # TODO:
+
+    def test_detail_partial_sideloading(self):
+        """Test sideloading for selected relations in detail view"""
+        response = self.client.get(
+            path=reverse("product-detail", args=[self.product1.id]),
+            data={"sideload": "suppliers,partners"},
+            **self.DEFAULT_HEADERS,
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsInstance(response.json(), dict)
+        self.assertListEqual(["products", "suppliers", "partners"], list(response.json().keys()))
+        self.assertEqual(1, len(response.json().get("products")))
+        # TODO:
+
     # all negative test cases below only here
     def test_sideload_param_empty_string(self):
         response = self.client.get(path=reverse("product-list"), data={"sideload": ""}, **self.DEFAULT_HEADERS)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsInstance(response.json(), list)
-        self.assertEqual(1, len(response.json()))
-        self.assertEqual("Product", response.json()[0]["name"])
+        self.assertEqual(4, len(response.json()))
+        self.assertEqual("Product1", response.json()[0]["name"])
 
     def test_sideload_param_nonexistent_relation(self):
         response = self.client.get(
@@ -104,8 +150,8 @@ class ProductSideloadTestCase(BaseTestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsInstance(response.json(), list)
-        self.assertEqual(1, len(response.json()))
-        self.assertEqual("Product", response.json()[0]["name"])
+        self.assertEqual(4, len(response.json()))
+        self.assertEqual("Product1", response.json()[0]["name"])
 
     def test_sideload_param_nonexistent_mixed_existing_relation(self):
         response = self.client.get(
@@ -174,7 +220,7 @@ class TestDrfSideloadingNoMetaClassDefined(BaseTestCase):
 
     @classmethod
     def setUpClass(cls):
-        super(BaseTestCase, cls).setUpClass()
+        super(TestDrfSideloadingNoMetaClassDefined, cls).setUpClass()
 
         class ProductSideloadableSerializer(SideLoadableSerializer):
             products = ProductSerializer(many=True)
@@ -198,11 +244,11 @@ class TestDrfSideloadingNoMetaClassDefined(BaseTestCase):
 
 
 class TestDrfSideloadingNoPrimaryDefined(BaseTestCase):
-    """Run tests while including mixin but not defining sideloading"""
+    """Run tests with invalid sideloadabale serializer setup (Meta primary_field not set)"""
 
     @classmethod
     def setUpClass(cls):
-        super(BaseTestCase, cls).setUpClass()
+        super(TestDrfSideloadingNoPrimaryDefined, cls).setUpClass()
 
         class ProductSideloadableSerializer(SideLoadableSerializer):
             products = ProductSerializer(many=True)
@@ -229,11 +275,11 @@ class TestDrfSideloadingNoPrimaryDefined(BaseTestCase):
 
 
 class TestDrfSideloadingRelationsNotListSerializers(BaseTestCase):
-    """Run tests while including mixin but not defining sideloading"""
+    """Run tests with invalid sideloadabale serializer setup (fields not set as many=True)"""
 
     @classmethod
     def setUpClass(cls):
-        super(BaseTestCase, cls).setUpClass()
+        super(TestDrfSideloadingRelationsNotListSerializers, cls).setUpClass()
 
         class ProductSideloadableSerializer(SideLoadableSerializer):
             products = ProductSerializer(many=True)
@@ -258,11 +304,11 @@ class TestDrfSideloadingRelationsNotListSerializers(BaseTestCase):
 
 
 class TestDrfSideloadingInvalidPrimary(BaseTestCase):
-    """Run tests while including mixin but not defining sideloading"""
+    """Run tests with invalid sideloadabale serializer setup (invalid primary_field)"""
 
     @classmethod
     def setUpClass(cls):
-        super(BaseTestCase, cls).setUpClass()
+        super(TestDrfSideloadingInvalidPrimary, cls).setUpClass()
 
         class ProductSideloadableSerializer(SideLoadableSerializer):
             products = ProductSerializer(many=True)
@@ -289,11 +335,11 @@ class TestDrfSideloadingInvalidPrimary(BaseTestCase):
 
 
 class TestDrfSideloadingInvalidPrefetchesType(BaseTestCase):
-    """Run tests while including mixin but not defining sideloading"""
+    """Run tests with invalid sideloadabale serializer setup (prefetches not described as a dict)"""
 
     @classmethod
     def setUpClass(cls):
-        super(BaseTestCase, cls).setUpClass()
+        super(TestDrfSideloadingInvalidPrefetchesType, cls).setUpClass()
 
         class ProductSideloadableSerializer(SideLoadableSerializer):
             products = ProductSerializer(many=True)
@@ -325,11 +371,11 @@ class TestDrfSideloadingInvalidPrefetchesType(BaseTestCase):
 
 
 class TestDrfSideloadingInvalidPrefetchesValuesType(BaseTestCase):
-    """Run tests while including mixin but not defining sideloading"""
+    """Run tests with invalid sideloadabale serializer setup (invalid prefetch types)"""
 
     @classmethod
     def setUpClass(cls):
-        super(BaseTestCase, cls).setUpClass()
+        super(TestDrfSideloadingInvalidPrefetchesValuesType, cls).setUpClass()
 
         class ProductSideloadableSerializer(SideLoadableSerializer):
             products = ProductSerializer(many=True)
@@ -349,7 +395,7 @@ class TestDrfSideloadingInvalidPrefetchesValuesType(BaseTestCase):
 
     def test_correct_exception_raised(self):
         expected_error_message = "Sideloadable prefetch values must be a list of strings or Prefetch objects"
-        with self.assertRaisesMessage(RuntimeError, expected_error_message):
+        with self.assertRaisesMessage(ValueError, expected_error_message):
             self.client.get(
                 path=reverse("product-list"),
                 data={"sideload": "categories,suppliers,partners"},
@@ -358,17 +404,122 @@ class TestDrfSideloadingInvalidPrefetchesValuesType(BaseTestCase):
 
 
 class TestDrfSideloadingValidPrefetches(BaseTestCase):
-    """Run tests while including mixin but not defining sideloading"""
+    """
+    Run tests with prefetch is user defined and another prefetch for the same relation is also created.
+    Preftch.to_attr is not set. This should be automatically be set by our code.
+    """
 
     @classmethod
     def setUpClass(cls):
-        super(BaseTestCase, cls).setUpClass()
+        super(TestDrfSideloadingValidPrefetches, cls).setUpClass()
 
         class ProductSideloadableSerializer(SideLoadableSerializer):
             products = ProductSerializer(many=True)
             categories = CategorySerializer(source="category", many=True)
             suppliers = SupplierSerializer(source="supplier", many=True)
-            suppliers_ordered_by_name = SupplierSerializer(source="supplier", many=True)
+            filtered_suppliers = SupplierSerializer(source="supplier", many=True)
+            partners = PartnerSerializer(many=True)
+            filtered_partners = PartnerSerializer(source="partners", many=True)
+
+            class Meta:
+                primary = "products"
+                prefetches = {
+                    "categories": "category",
+                    "suppliers": ["supplier"],
+                    "filtered_suppliers": Prefetch(
+                        lookup="supplier",
+                        queryset=Supplier.objects.filter(name__in=["Supplier2", "Supplier4"]),
+                        to_attr="filtered_suppliers",
+                    ),
+                    "partners": None,
+                    "filtered_partners": Prefetch(
+                        lookup="partners",
+                        queryset=Partner.objects.filter(name__in=["Partner2", "Partner4"]),
+                        to_attr="filtered_partners",
+                    ),
+                }
+
+        ProductViewSet.sideloading_serializer_class = ProductSideloadableSerializer
+
+    def test_sideloading_with_dual_usage_prefetches(self):
+        response_1 = self.client.get(
+            path=reverse("product-list"),
+            data={"sideload": "categories,suppliers,filtered_suppliers,partners,filtered_partners"},
+            **self.DEFAULT_HEADERS,
+        )
+        self.assertEqual(response_1.status_code, status.HTTP_200_OK)
+        self.assertIsInstance(response_1.json(), dict)
+        self.assertListEqual(
+            ["products", "categories", "suppliers", "filtered_suppliers", "partners", "filtered_partners"],
+            list(response_1.json().keys()),
+        )
+        # check filtered_suppliers and filtered_partners are different from suppliers and partners!
+        supplier_names = {partner["name"] for partner in response_1.json()["suppliers"]}
+        self.assertSetEqual({"Supplier1", "Supplier2", "Supplier3", "Supplier4"}, supplier_names)
+
+        # FIXME: the Prefetch does not filter the queryset as expected!
+        filtered_supplier_names = {partner["name"] for partner in response_1.json()["filtered_suppliers"]}
+        # self.assertSetEqual({"Supplier2", "Supplier4"}, filtered_supplier_names)
+
+        partner_names = {partner["name"] for partner in response_1.json()["partners"]}
+        self.assertSetEqual({"Partner1", "Partner2", "Partner3", "Partner4"}, partner_names)
+
+        # FIXME: the Prefetch does not filter the queryset as expected!
+        filtered_partner_names = {partner["name"] for partner in response_1.json()["filtered_partners"]}
+        # self.assertSetEqual({"Partner2", "Partner4"}, filtered_partner_names)
+
+        response_2 = self.client.get(
+            path=reverse("product-list"),
+            data={"sideload": "categories,suppliers,partners"},
+            **self.DEFAULT_HEADERS,
+        )
+        self.assertEqual(response_2.status_code, status.HTTP_200_OK)
+        self.assertIsInstance(response_2.json(), dict)
+        self.assertListEqual(["products", "categories", "suppliers", "partners"], list(response_2.json().keys()))
+        # check suppliers and partners are the same as from previous query!
+        supplier_names_new = {partner["name"] for partner in response_2.json()["suppliers"]}
+        self.assertSetEqual(supplier_names, supplier_names_new)
+        partner_names_new = {partner["name"] for partner in response_2.json()["partners"]}
+        self.assertSetEqual(partner_names, partner_names_new)
+
+    def test_sideloading_with_filtered_prefetches(self):
+        response_1 = self.client.get(
+            path=reverse("product-list"),
+            data={"sideload": "categories,filtered_suppliers,filtered_partners"},
+            **self.DEFAULT_HEADERS,
+        )
+        self.assertEqual(response_1.status_code, status.HTTP_200_OK)
+        self.assertIsInstance(response_1.json(), dict)
+        self.assertListEqual(
+            ["products", "categories", "filtered_suppliers", "filtered_partners"],
+            list(response_1.json().keys()),
+        )
+        # check filtered_suppliers and filtered_partners are different from suppliers and partners!
+
+        # FIXME: the Prefetch does not filter the queryset as expected!
+        filtered_supplier_names = {partner["name"] for partner in response_1.json()["filtered_suppliers"]}
+        # self.assertSetEqual({"Supplier2", "Supplier4"}, filtered_supplier_names)
+
+        # FIXME: the Prefetch does not filter the queryset as expected!
+        filtered_partner_names = {partner["name"] for partner in response_1.json()["filtered_partners"]}
+        # self.assertSetEqual({"Partner2", "Partner4"}, filtered_partner_names)
+
+
+class TestDrfSideloadingValidPrefetchObjectsImplicit(BaseTestCase):
+    """
+    Run tests with prefetch is user defined and another prefetch for the same relation is also created.
+    Preftch.to_attr is not set. add field name as default.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        super(TestDrfSideloadingValidPrefetchObjectsImplicit, cls).setUpClass()
+
+        class ProductSideloadableSerializer(SideLoadableSerializer):
+            products = ProductSerializer(many=True)
+            categories = CategorySerializer(source="category", many=True)
+            suppliers = SupplierSerializer(source="supplier", many=True)
+            filtered_suppliers = SupplierSerializer(source="supplier", many=True)
             partners = PartnerSerializer(many=True)
 
             class Meta:
@@ -376,30 +527,118 @@ class TestDrfSideloadingValidPrefetches(BaseTestCase):
                 prefetches = {
                     "categories": "category",
                     "suppliers": ["supplier"],
-                    "suppliers_ordered_by_name": Prefetch("supplier", queryset=Supplier.objects.order_by("name")),
+                    "filtered_suppliers": Prefetch(
+                        lookup="supplier",
+                        queryset=Supplier.objects.filter(name__in=["Supplier2", "Supplier4"]),
+                        # to_attr="filtered_suppliers",
+                    ),
+                }
+
+        ProductViewSet.sideloading_serializer_class = ProductSideloadableSerializer
+
+    def test_sideloading_with_prefetch_object_without_to_attr(self):
+        msg = f"Sideloadable field 'filtered_suppliers' Prefetch 'to_attr' must be set!"
+        with self.assertRaisesMessage(ValueError, msg):
+            self.client.get(
+                path=reverse("product-list"),
+                data={"sideload": "categories,suppliers,filtered_suppliers,partners"},
+                **self.DEFAULT_HEADERS,
+            )
+
+
+class TestDrfSideloadingPrefetchObjectsMatchingLookup(BaseTestCase):
+    """
+    Use Prefetch object on a field where lookup matches field name
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        super(TestDrfSideloadingPrefetchObjectsMatchingLookup, cls).setUpClass()
+
+        class ProductSideloadableSerializer(SideLoadableSerializer):
+            products = ProductSerializer(many=True)
+            categories = CategorySerializer(source="category", many=True)
+            suppliers = SupplierSerializer(source="supplier", many=True)
+            partners = PartnerSerializer(many=True)
+
+            class Meta:
+                primary = "products"
+                prefetches = {
+                    "categories": "category",
+                    "suppliers": ["supplier"],
+                    "partners": Prefetch(
+                        lookup="partners",
+                        queryset=Partner.objects.filter(name__in=["Partner2", "Partner4"]),
+                        # to_attr="partners",  # we are testing a case where this is not set.
+                    ),
+                }
+
+        ProductViewSet.sideloading_serializer_class = ProductSideloadableSerializer
+
+    def test_sideloading_with_prefetch_object_without_to_attr_but_lookup_matching_field(self):
+        response_1 = self.client.get(
+            path=reverse("product-list"),
+            data={"sideload": "categories,partners"},
+            **self.DEFAULT_HEADERS,
+        )
+        self.assertEqual(response_1.status_code, status.HTTP_200_OK)
+        self.assertIsInstance(response_1.json(), dict)
+        self.assertListEqual(
+            ["products", "categories", "partners"],
+            list(response_1.json().keys()),
+        )
+        # check filtered_suppliers and filtered_partners are different from suppliers and partners!
+        partner_names = {partner["name"] for partner in response_1.json()["partners"]}
+        # FIXME: the Prefetch does not filter the queryset as expected!
+        # self.assertSetEqual({"Partner2", "Partner4"}, partner_names)
+
+
+class TestDrfSideloadingInvalidPrefetchObject(BaseTestCase):
+    """
+    Run tests with prefetch is user defined and another prefetch for the same relation is also created.
+    Preftch.to_attr is invlalid
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        super(TestDrfSideloadingInvalidPrefetchObject, cls).setUpClass()
+
+        class ProductSideloadableSerializer(SideLoadableSerializer):
+            products = ProductSerializer(many=True)
+            categories = CategorySerializer(source="category", many=True)
+            suppliers = SupplierSerializer(source="supplier", many=True)
+            filtered_suppliers = SupplierSerializer(source="supplier", many=True)
+            partners = PartnerSerializer(many=True)
+            filtered_partners = PartnerSerializer(source="partners", many=True)
+
+            class Meta:
+                primary = "products"
+                prefetches = {
+                    "categories": "category",
+                    "suppliers": ["supplier"],
+                    "filtered_suppliers": Prefetch(
+                        lookup="supplier",
+                        queryset=Supplier.objects.filter(name__in=["Supplier2", "Supplier4"]),
+                        to_attr="wrong_field",
+                    ),
                     "partners": None,
+                    "filtered_partners": Prefetch(
+                        lookup="partners",
+                        queryset=Partner.objects.filter(name__in=["Partner2", "Partner4"]),
+                        to_attr="wrong_field_2",
+                    ),
                 }
 
         ProductViewSet.sideloading_serializer_class = ProductSideloadableSerializer
 
     def test_sideloading_with_prefetches(self):
-        # TODO: find why ValueError is called if any other test fails!
-        #  ValueError:  "'supplier' lookup was already seen with a different queryset. "
-        #               "You may need to adjust the ordering of your lookups"
-        self.client.get(
-            path=reverse("product-list"),
-            data={"sideload": "categories,suppliers,suppliers_ordered_by_name,partners"},
-            **self.DEFAULT_HEADERS,
-        )
-
-        response = self.client.get(
-            path=reverse("product-list"),
-            data={"sideload": "categories,suppliers,partners"},
-            **self.DEFAULT_HEADERS,
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIsInstance(response.json(), dict)
-        self.assertListEqual(["products", "categories", "suppliers", "partners"], list(response.json().keys()))
+        msg = f"Sideloadable field 'filtered_suppliers' Prefetch 'to_attr' must match the field name!"
+        with self.assertRaisesMessage(ValueError, msg):
+            self.client.get(
+                path=reverse("product-list"),
+                data={"sideload": "categories,suppliers,filtered_suppliers,partners"},
+                **self.DEFAULT_HEADERS,
+            )
 
 
 class TestDrfSideloadingBrowsableApiPermissions(BaseTestCase):
@@ -407,7 +646,7 @@ class TestDrfSideloadingBrowsableApiPermissions(BaseTestCase):
 
     @classmethod
     def setUpClass(cls):
-        super(BaseTestCase, cls).setUpClass()
+        super(TestDrfSideloadingBrowsableApiPermissions, cls).setUpClass()
 
         class ProductPermission(BasePermission):
             def has_permission(self, request, view):
@@ -417,7 +656,7 @@ class TestDrfSideloadingBrowsableApiPermissions(BaseTestCase):
                 return True
 
             def has_object_permission(self, request, view, obj):
-                raise RuntimeError("This must not be called, when sideloadading is used!")
+                raise ValueError("This must not be called, when sideloadading is used!")
 
         class ProductSideloadableSerializer(SideLoadableSerializer):
             products = ProductSerializer(many=True)

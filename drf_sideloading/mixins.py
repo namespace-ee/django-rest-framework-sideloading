@@ -2,6 +2,7 @@ import copy
 from itertools import chain
 
 from django.db.models import Prefetch
+from rest_framework.generics import get_object_or_404
 from rest_framework.renderers import BrowsableAPIRenderer
 from rest_framework.response import Response
 from rest_framework.serializers import ListSerializer
@@ -78,8 +79,17 @@ class SideloadableRelationsMixin(object):
                 if not isinstance(v, list):
                     v = [v]
                 for vi in v:
-                    if not isinstance(vi, (str, Prefetch)):
-                        raise RuntimeError("Sideloadable prefetch values must be a list of strings or Prefetch objects")
+                    if isinstance(vi, str):
+                        pass
+                    elif isinstance(vi, Prefetch):
+                        # check that to_attr is set the same as the field!
+                        if not vi.to_attr:
+                            if vi.prefetch_to != k:
+                                raise ValueError(f"Sideloadable field '{k}' Prefetch 'to_attr' must be set!")
+                        elif vi.to_attr != k:
+                            raise ValueError(f"Sideloadable field '{k}' Prefetch 'to_attr' must match the field name!")
+                    else:
+                        raise ValueError("Sideloadable prefetch values must be a list of strings or Prefetch objects")
                 cleaned_prefetches[k] = v
         return cleaned_prefetches
 
@@ -152,7 +162,17 @@ class SideloadableRelationsMixin(object):
     def get_relevant_prefetches(self):
         if not self._prefetches:
             return set()
-        return set(pf for relation in self.relations_to_sideload for pf in self._prefetches.get(relation, []))
+        # Prefetch object must be defined before string type prefetches to avoid ValueError:
+        #       "'supplier' lookup was already seen with a different queryset. "
+        #       "You may need to adjust the ordering of your lookups."
+
+        # maybe we even need to define the string type as a separate Prefetch object
+        # in case the second one overwrites the first one?!
+
+        # or set Prefetch_object first to always raise the error?
+        prefetches = set(pf for relation in self.relations_to_sideload for pf in self._prefetches.get(relation, []))
+        prefetches = list(pf if isinstance(pf, Prefetch) else Prefetch(pf) for pf in prefetches)
+        return prefetches
 
     def get_sideloadable_page_from_queryset(self, queryset):
         # this works wonders, but can't be used when page is paginated...
