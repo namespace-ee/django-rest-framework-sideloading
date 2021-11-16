@@ -1,4 +1,5 @@
 import copy
+import itertools
 from itertools import chain
 
 from django.db.models import Prefetch
@@ -14,11 +15,16 @@ from drf_sideloading.serializers import SideLoadableSerializer
 class MultiSourceSerializerMixin:
     sources = []
 
-    def __init__(self, sources, *args, **kwargs):
+    def __init__(self, sources, source=None, read_only=None, *args, **kwargs):
         self.sources = sources
-        if sources and not kwargs.get("source"):
-            kwargs["source"] = sources[0]  # used only for ModelSerializer binding
-        super().__init__(*args, *kwargs)
+        if not sources:
+            raise ValueError("'sources' is a required argument")
+        if not source:
+            source = sources[0]  # used only for ModelSerializer binding
+        if read_only is False:
+            raise ValueError("'read_only' can't be set to False")
+
+        super().__init__(source=source, read_only=True, *args, *kwargs)
 
 
 class SideloadableRelationsMixin(object):
@@ -213,13 +219,11 @@ class SideloadableRelationsMixin(object):
                 raise RuntimeError("SideLoadable field '{}' must be set as many=True".format(relation))
 
             if isinstance(field.child, MultiSourceSerializerMixin):
-                relation_ids = set()
-                for source in field.child.sources:
-                    relation_ids.update(set(queryset.values_list(source, flat=True)))
-                sideloadable_page[field_source] = rel_model.objects.filter(pk__in=relation_ids)
+                relation_ids = set(itertools.chain(*queryset.values_list(*field.child.sources)))
             else:
                 relation_ids = queryset.values_list(field_source, flat=True)
-                sideloadable_page[field_source] = rel_model.objects.filter(pk__in=relation_ids)
+
+            sideloadable_page[field_source] = rel_model.objects.filter(pk__in=relation_ids)
 
         return sideloadable_page
 
