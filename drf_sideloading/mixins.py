@@ -1,12 +1,13 @@
 import copy
 import itertools
+import re
 from itertools import chain
 
 from django.db.models import Prefetch
 from rest_framework.generics import get_object_or_404
 from rest_framework.renderers import BrowsableAPIRenderer
 from rest_framework.response import Response
-from rest_framework.serializers import ListSerializer
+from rest_framework.serializers import ListSerializer, ModelSerializer
 
 from drf_sideloading.renderers import BrowsableAPIRendererWithoutForms
 from drf_sideloading.serializers import SideLoadableSerializer
@@ -72,48 +73,67 @@ class SideloadableRelationsMixin(object):
         # check serializer fields:
         for name, field in self.sideloading_serializer_class._declared_fields.items():
             assert getattr(field, "many", None), "SideLoadable field '{}' must be set as many=True".format(name)
-
-        # check serializer fields:
-        for name, field in self.sideloading_serializer_class._declared_fields.items():
-            assert getattr(field, "many", None), "SideLoadable field '{}' must be set as many=True".format(name)
+            assert isinstance(
+                field.child, ModelSerializer
+            ), "SideLoadable field '{}' serializer must be inherited from ModelSerializer".format(name)
 
     def get_primary_field_name(self):
         return self.sideloading_serializer_class.Meta.primary
 
     def get_sideloadable_fields(self):
         sideloadable_fields = copy.deepcopy(self.sideloading_serializer_class._declared_fields)
-        sideloadable_fields.pop(self._primary_field_name, None)
+        sideloadable_fields.pop(self._primary_field_name)
         return sideloadable_fields
 
     def get_sideloading_prefetches(self):
-        prefetches = getattr(self.sideloading_serializer_class.Meta, "prefetches", {})
-        if not prefetches:
-            return None
         cleaned_prefetches = {}
-        for k, v in prefetches.items():
-            if v is not None:
-                if not isinstance(v, list):
-                    v = [v]
-                for vi in v:
-                    if isinstance(vi, str):
-                        pass
-                    elif isinstance(vi, Prefetch):
-                        # check that to_attr is set the same as the field!
-                        if not vi.to_attr:
-                            if vi.prefetch_to != k:
-                                raise ValueError(f"Sideloadable field '{k}' Prefetch 'to_attr' must be set!")
-                        elif vi.to_attr != k:
-                            raise ValueError(f"Sideloadable field '{k}' Prefetch 'to_attr' must match the field name!")
-                    else:
-                        raise ValueError("Sideloadable prefetch values must be a list of strings or Prefetch objects")
-                cleaned_prefetches[k] = v
+        user_defined_prefetches = getattr(self.sideloading_serializer_class.Meta, "prefetches", {})
+
+        # set source as the default prefetch object
+        for relation, field in self._sideloadable_fields.items():
+            if isinstance(field.child, MultiSourceSerializerMixin):
+                cleaned_prefetches[relation] = field.child.sources
+            else:
+                cleaned_prefetches[relation] = [field.child.source or relation]
+
+            # FIXME:
+            # create Prefetch object if a queryset is defined?
+            # if field.source.queryset
+
+        for relation, prefetches in user_defined_prefetches.items():
+            # remove prefetching if requested by the user
+            if prefetches is None:
+                cleaned_prefetches[relation] = []
+                continue
+
+            # cast to list
+            if not isinstance(prefetches, list):
+                prefetches = [prefetches]
+
+            # check the prefetches are correct
+            for prefetch in prefetches:
+                if isinstance(prefetch, str):
+                    pass
+                elif isinstance(prefetch, Prefetch):
+                    # check that to_attr is set the same as the field!
+                    if not prefetch.to_attr:
+                        if prefetch.prefetch_to != relation:
+                            raise ValueError(f"Sideloadable field '{relation}' Prefetch 'to_attr' must be set!")
+                    elif prefetch.to_attr != relation:
+                        raise ValueError(
+                            f"Sideloadable field '{relation}' Prefetch 'to_attr' must match the field name!"
+                        )
+                else:
+                    raise ValueError("Sideloadable prefetch values must be a list of strings or Prefetch objects")
+            cleaned_prefetches[relation] = prefetches
+
         return cleaned_prefetches
 
     def initialize_request(self, request, *args, **kwargs):
         request = super(SideloadableRelationsMixin, self).initialize_request(request=request, *args, **kwargs)
 
-        sideload_params = self.parse_query_param(sideload_parameter=request.query_params.get(self.query_param_name, ""))
-        if request.method == "GET" and sideload_params:
+        self.parse_query_param(sideload_parameter=request.query_params.get(self.query_param_name, ""))
+        if request.method == "GET" and self.relations_to_sideload:
             # When sideloading disable BrowsableAPIForms
             if BrowsableAPIRenderer in self.renderer_classes:
                 renderer_classes = (
@@ -127,10 +147,10 @@ class SideloadableRelationsMixin(object):
         return request
 
     def list(self, request, *args, **kwargs):
-        sideload_params = self.parse_query_param(sideload_parameter=request.query_params.get(self.query_param_name, ""))
+        self.parse_query_param(sideload_parameter=request.query_params.get(self.query_param_name, ""))
 
         # Do not sideload unless params and GET method
-        if request.method != "GET" or not sideload_params:
+        if request.method != "GET" or not self.relations_to_sideload:
             return super(SideloadableRelationsMixin, self).list(request, *args, **kwargs)
 
         # After this `relations_to_sideload` is safe to use
@@ -148,7 +168,7 @@ class SideloadableRelationsMixin(object):
             sideloadable_page = self.get_sideloadable_page(page)
             serializer = self.sideloading_serializer_class(
                 instance=sideloadable_page,
-                fields_to_load=[self._primary_field_name] + list(self.relations_to_sideload),
+                relations_to_sideload=self.relations_to_sideload,
                 context={"request": request},
             )
             return self.get_paginated_response(serializer.data)
@@ -156,16 +176,16 @@ class SideloadableRelationsMixin(object):
             sideloadable_page = self.get_sideloadable_page_from_queryset(queryset)
             serializer = self.sideloading_serializer_class(
                 instance=sideloadable_page,
-                fields_to_load=[self._primary_field_name] + list(self.relations_to_sideload),
+                relations_to_sideload=self.relations_to_sideload,
                 context={"request": request},
             )
             return Response(serializer.data)
 
     def retrieve(self, request, *args, **kwargs):
-        sideload_params = self.parse_query_param(sideload_parameter=request.query_params.get(self.query_param_name, ""))
+        self.parse_query_param(sideload_parameter=request.query_params.get(self.query_param_name, ""))
 
         # Do not sideload unless params and GET method
-        if request.method != "GET" or not sideload_params:
+        if request.method != "GET" or not self.relations_to_sideload:
             return super(SideloadableRelationsMixin, self).retrieve(request, *args, **kwargs)
 
         # return object with sideloading serializer
@@ -173,7 +193,7 @@ class SideloadableRelationsMixin(object):
         sideloadable_page = self.get_sideloadable_page_from_queryset(queryset)
         serializer = self.sideloading_serializer_class(
             instance=sideloadable_page,
-            fields_to_load=[self._primary_field_name] + list(self.relations_to_sideload),
+            relations_to_sideload=self.relations_to_sideload,
             context={"request": request},
         )
         return Response(serializer.data)
@@ -188,8 +208,21 @@ class SideloadableRelationsMixin(object):
         comma separated relation names may contain invalid or unusable characters.
         This function finds string match between requested names and defined relation in view
 
+        new:
+
+        response changed to dict as the sources for multi source fields must be selectable.
+
         """
-        self.relations_to_sideload = set(sideload_parameter.split(",")) & set(self._sideloadable_fields.keys())
+        sideloadable_relations = set(self._sideloadable_fields.keys())
+
+        self.relations_to_sideload = {}
+        for param in re.split(",\s*(?![^\[\]]*\])", sideload_parameter):
+            try:
+                fieldname, sources_str = param.split("[", 1)
+                self.relations_to_sideload[fieldname] = set(sources_str.strip("]").split(","))
+            except ValueError:
+                if param in sideloadable_relations:
+                    self.relations_to_sideload[param] = None
         return self.relations_to_sideload
 
     def get_relevant_prefetches(self):
@@ -203,14 +236,15 @@ class SideloadableRelationsMixin(object):
         # in case the second one overwrites the first one?!
 
         # or set Prefetch_object first to always raise the error?
-        prefetches = set(pf for relation in self.relations_to_sideload for pf in self._prefetches.get(relation, []))
+        # TODO: combine and filter prefetches for multi source fields
+        prefetches = set(pf for relation in self.relations_to_sideload for pf in self._prefetches[relation] or [])
         prefetches = list(pf if isinstance(pf, Prefetch) else Prefetch(pf) for pf in prefetches)
         return prefetches
 
     def get_sideloadable_page_from_queryset(self, queryset):
         # this works wonders, but can't be used when page is paginated...
         sideloadable_page = {self._primary_field_name: queryset}
-        for relation in self.relations_to_sideload:
+        for relation, source_keys in self.relations_to_sideload.items():
             field = self._sideloadable_fields[relation]
             field_source = field.source or relation
             rel_model = field.child.Meta.model
@@ -219,8 +253,12 @@ class SideloadableRelationsMixin(object):
                 raise RuntimeError("SideLoadable field '{}' must be set as many=True".format(relation))
 
             if isinstance(field.child, MultiSourceSerializerMixin):
-                relation_ids = set(itertools.chain(*queryset.values_list(*field.child.sources)))
+                # find correct sources if MultiSourceField has filtering applied
+                sources = [getattr(self._sideloadable_fields[source], "source", source) for source in source_keys or []]
+                # find all related object ids
+                relation_ids = set(itertools.chain(*queryset.values_list(*(sources or field.child.sources))))
             else:
+                # find all related object ids
                 relation_ids = queryset.values_list(field_source, flat=True)
 
             sideloadable_page[field_source] = rel_model.objects.filter(pk__in=relation_ids)
@@ -229,7 +267,7 @@ class SideloadableRelationsMixin(object):
 
     def get_sideloadable_page(self, page):
         sideloadable_page = {self._primary_field_name: page}
-        for relation in self.relations_to_sideload:
+        for relation, sources in self.relations_to_sideload.items():
             field = self._sideloadable_fields[relation]
             field_source = field.source or relation
             if not isinstance(field, ListSerializer):
@@ -239,7 +277,7 @@ class SideloadableRelationsMixin(object):
                 sideloadable_page[relation] = set()
                 if field_source not in sideloadable_page:
                     sideloadable_page[field_source] = set()
-                for source in field.child.sources:
+                for source in sources or field.child.sources:
                     sideloadable_page[field_source] |= self.filter_related_objects(related_objects=page, lookup=source)
             else:
                 source = self._sideloadable_fields[relation].source or relation

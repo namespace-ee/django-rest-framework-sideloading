@@ -2,12 +2,15 @@ from collections import OrderedDict
 
 from rest_framework import serializers
 from rest_framework.fields import SkipField, empty
-from rest_framework.relations import PKOnlyObject
 
 
 class SideLoadableSerializer(serializers.Serializer):
-    def __init__(self, instance=None, data=empty, fields_to_load=None, **kwargs):
-        self.fields_to_load = fields_to_load
+    fields_to_load = None
+    relations_to_sideload = None
+
+    def __init__(self, instance=None, data=empty, relations_to_sideload=None, **kwargs):
+        self.relations_to_sideload = relations_to_sideload
+        self.fields_to_load = [self.Meta.primary] + list(relations_to_sideload.keys())
         super(SideLoadableSerializer, self).__init__(instance=instance, data=data, **kwargs)
 
     def to_representation(self, instance):
@@ -32,8 +35,7 @@ class SideLoadableSerializer(serializers.Serializer):
             #
             # For related fields with `use_pk_only_optimization` we need to
             # resolve the pk value.
-            check_for_none = attribute.pk if isinstance(attribute, PKOnlyObject) else attribute
-            if check_for_none is None:
+            if getattr(attribute, "pk", attribute) is None:
                 ret[field.field_name] = None
             else:
                 ret[field.field_name] = field.to_representation(attribute)
