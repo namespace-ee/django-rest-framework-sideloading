@@ -2,9 +2,10 @@ import copy
 import itertools
 import re
 from itertools import chain
-from typing import List, Dict
+from typing import List, Dict, Optional, Union, Tuple
 
 from django.db.models import Prefetch
+from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404
 from rest_framework.renderers import BrowsableAPIRenderer
 from rest_framework.response import Response
@@ -19,13 +20,16 @@ class SideloadableRelationsMixin(object):
     sideloading_serializer_class = None
     _primary_field_name = None
     _sideloadable_fields = None
-    relations_to_sideload = None
+    _prefetches = None
 
     def __init__(self, **kwargs):
         self.check_sideloading_serializer_class()
         self._primary_field_name = self.get_primary_field_name()
         self._sideloadable_fields = self.get_sideloadable_fields()
-        self._prefetches = self.get_sideloading_prefetches()
+        self._prefetches = self._gather_all_prefetches(
+            sideloadable_fields=self._sideloadable_fields,
+            user_defined_prefetches=getattr(self.sideloading_serializer_class.Meta, "prefetches", None),
+        )
         super(SideloadableRelationsMixin, self).__init__(**kwargs)
 
     def check_sideloading_serializer_class(self):
@@ -71,72 +75,13 @@ class SideloadableRelationsMixin(object):
         sideloadable_fields.pop(self._primary_field_name)
         return sideloadable_fields
 
-    def clean_prefetches(self, relation, value, ensure_list=False):
-        if not value:
-            cleaned_value = None
-        elif isinstance(value, str):
-            cleaned_value = value
-        elif isinstance(value, list):
-            cleaned_value = [self.clean_prefetches(relation=relation, value=val) for val in value]
-            # filter out empty values
-            cleaned_value = [val for val in cleaned_value if val]
-        elif isinstance(value, dict):
-            if "lookup" not in value:
-                raise ValueError(f"Sideloadable field '{relation}' Prefetch 'lookup' must be set!")
-            # if "queryset" not in prefetches:
-            #     raise ValueError(f"Sideloadable field '{relation}' Prefetch 'queryset' must be set!")
-            cleaned_value = Prefetch(**value, to_attr=relation)
-        elif isinstance(value, Prefetch):
-            # check that to_attr is set the same as the field!
-            if not value.to_attr:
-                if value.prefetch_to != relation:
-                    raise ValueError(f"Sideloadable field '{relation}' Prefetch 'to_attr' must be set!")
-            elif value.to_attr != relation:
-                raise ValueError(f"Sideloadable field '{relation}' Prefetch 'to_attr' must match the field name!")
-            cleaned_value = value
-        else:
-            raise ValueError("Sideloadable prefetch values must be a list of strings or Prefetch objects")
-
-        if ensure_list:
-            if not cleaned_value:
-                return []
-            elif not isinstance(cleaned_value, list):
-                return [cleaned_value]
-
-        return cleaned_value
-
-    def get_sideloading_prefetches(self) -> Dict:
-        cleaned_prefetches = {}
-        user_defined_prefetches = getattr(self.sideloading_serializer_class.Meta, "prefetches", {})
-
-        # set source as the default prefetch object
-        for relation, field in self._sideloadable_fields.items():
-            user_prefetches = user_defined_prefetches.get(relation)
-            if relation in user_defined_prefetches and user_prefetches in [None, []]:
-                # user has explicitly defined no prefetching
-                cleaned_prefetches[relation] = []
-            elif not user_prefetches:
-                # default to field source if not defined by user
-                cleaned_prefetches[relation] = [field.child.source]
-            elif isinstance(user_prefetches, dict):
-                # This is a multi source field!
-                # make prefetches for all relations separately
-                cleaned_prefetches[relation] = {}
-                for rel, rel_prefetches in user_prefetches.items():
-                    prefetches = self.clean_prefetches(relation=rel, value=rel_prefetches, ensure_list=True)
-                    cleaned_prefetches[relation][rel] = prefetches
-            else:
-                cleaned_prefetches[relation] = self.clean_prefetches(
-                    relation=relation, value=user_prefetches, ensure_list=True
-                )
-
-        return cleaned_prefetches
-
     def initialize_request(self, request, *args, **kwargs):
         request = super(SideloadableRelationsMixin, self).initialize_request(request=request, *args, **kwargs)
 
-        self.parse_query_param(sideload_parameter=request.query_params.get(self.query_param_name, ""))
-        if request.method == "GET" and self.relations_to_sideload:
+        relations_to_sideload = self.parse_query_param(
+            sideload_parameter=request.query_params.get(self.query_param_name, "")
+        )
+        if request.method == "GET" and relations_to_sideload:
             # When sideloading disable BrowsableAPIForms
             if BrowsableAPIRenderer in self.renderer_classes:
                 renderer_classes = (
@@ -150,53 +95,74 @@ class SideloadableRelationsMixin(object):
         return request
 
     def list(self, request, *args, **kwargs):
-        self.parse_query_param(sideload_parameter=request.query_params.get(self.query_param_name, ""))
+        relations_to_sideload = self.parse_query_param(
+            sideload_parameter=request.query_params.get(self.query_param_name, "")
+        )
 
         # Do not sideload unless params and GET method
-        if request.method != "GET" or not self.relations_to_sideload:
+        if request.method != "GET" or not relations_to_sideload:
             return super(SideloadableRelationsMixin, self).list(request, *args, **kwargs)
 
         # After this `relations_to_sideload` is safe to use
         queryset = self.get_queryset()
 
         # Add prefetches if applicable
-        prefetch_relations = self.get_relevant_prefetches()
+        prefetch_relations, relations_sources = self._get_relevant_prefetches(
+            sideloadable_fields=self._sideloadable_fields,
+            relations_to_sideload=relations_to_sideload,
+            cleaned_prefetches=self._prefetches,
+        )
+
         if prefetch_relations:
-            queryset = queryset.prefetch_related(*prefetch_relations)
+            queryset = queryset.prefetch_related(*prefetch_relations.values())
         queryset = self.filter_queryset(queryset)
 
         # Create page
         page = self.paginate_queryset(queryset)
         if page is not None:
-            sideloadable_page = self.get_sideloadable_page(page)
+            sideloadable_page = self.get_sideloadable_page(
+                page=page,
+                relations_to_sideload=relations_to_sideload,
+                relations_sources=relations_sources,
+            )
             serializer = self.sideloading_serializer_class(
                 instance=sideloadable_page,
-                relations_to_sideload=self.relations_to_sideload,
+                relations_to_sideload=relations_to_sideload,
                 context={"request": request},
             )
             return self.get_paginated_response(serializer.data)
         else:
-            sideloadable_page = self.get_sideloadable_page_from_queryset(queryset)
+            sideloadable_page = self.get_sideloadable_page_from_queryset(
+                queryset=queryset,
+                relations_to_sideload=relations_to_sideload,
+                relations_sources=relations_sources,
+            )
             serializer = self.sideloading_serializer_class(
                 instance=sideloadable_page,
-                relations_to_sideload=self.relations_to_sideload,
+                relations_to_sideload=relations_to_sideload,
                 context={"request": request},
             )
             return Response(serializer.data)
 
     def retrieve(self, request, *args, **kwargs):
-        self.parse_query_param(sideload_parameter=request.query_params.get(self.query_param_name, ""))
+        relations_to_sideload = self.parse_query_param(
+            sideload_parameter=request.query_params.get(self.query_param_name, "")
+        )
 
         # Do not sideload unless params and GET method
-        if request.method != "GET" or not self.relations_to_sideload:
+        if request.method != "GET" or not relations_to_sideload:
             return super(SideloadableRelationsMixin, self).retrieve(request, *args, **kwargs)
 
         # return object with sideloading serializer
-        queryset = self.get_sideloadable_object_as_queryset()
-        sideloadable_page = self.get_sideloadable_page_from_queryset(queryset)
+        queryset, relations_sources = self.get_sideloadable_object_as_queryset(
+            relations_to_sideload=relations_to_sideload
+        )
+        sideloadable_page = self.get_sideloadable_page_from_queryset(
+            queryset=queryset, relations_to_sideload=relations_to_sideload, relations_sources=relations_sources
+        )
         serializer = self.sideloading_serializer_class(
             instance=sideloadable_page,
-            relations_to_sideload=self.relations_to_sideload,
+            relations_to_sideload=relations_to_sideload,
             context={"request": request},
         )
         return Response(serializer.data)
@@ -218,90 +184,55 @@ class SideloadableRelationsMixin(object):
         """
         sideloadable_relations = set(self._sideloadable_fields.keys())
 
-        self.relations_to_sideload = {}
+        relations_to_sideload = {}
         for param in re.split(",\s*(?![^\[\]]*\])", sideload_parameter):
             try:
                 fieldname, sources_str = param.split("[", 1)
-                self.relations_to_sideload[fieldname] = set(sources_str.strip("]").split(","))
+                relations = set(sources_str.strip("]").split(","))
+                if any(relations):
+                    relations_to_sideload[fieldname] = set(sources_str.strip("]").split(","))
             except ValueError:
                 if param in sideloadable_relations:
-                    self.relations_to_sideload[param] = None
-        return self.relations_to_sideload
+                    relations_to_sideload[param] = None
+        return relations_to_sideload
 
-    def get_relevant_prefetches(self) -> List:
-        if not self._prefetches:
-            return []
-        # Prefetch object must be defined before string type prefetches to avoid ValueError:
-        #       "'supplier' lookup was already seen with a different queryset. "
-        #       "You may need to adjust the ordering of your lookups."
+    def get_sideloadable_page_from_queryset(self, queryset, relations_to_sideload, relations_sources):
+        """
+        Populates page with sideloaded data by collecting ids form sideloaded values and then making into a query
+        """
 
-        # maybe we even need to define the string type as a separate Prefetch object
-        # in case the second one overwrites the first one?!
-
-        prefetches = []
-        for relation, selections in self.relations_to_sideload.items():
-            relation_prefetches = self._prefetches[relation]
-            if not relation_prefetches:
-                continue
-            elif isinstance(relation_prefetches, list):
-                prefetches.extend(relation_prefetches)
-            elif isinstance(relation_prefetches, dict):
-                # multi source field, check for source selection
-                if not selections or set(selections) == set(relation_prefetches.keys()) - {"__all__"}:
-                    # add __all__ prefetch
-                    prefetch_all = relation_prefetches["__all__"]
-                    if prefetch_all:
-                        prefetches.extend(prefetch_all)
-                else:
-                    # combine prefetches:
-                    prefetch_combined = [x for sel in selections for x in relation_prefetches.get(sel) or [] if x]
-
-                    if prefetch_combined:
-                        prefetches.extend(prefetch_combined)
-            else:
-                raise ValueError("Got invalid prefech type!")
-
-        # prefetches = set(pf for relation in self.relations_to_sideload for pf in self._prefetches[relation] or [])
-        # prefetches = list(pf if isinstance(pf, Prefetch) else Prefetch(pf) for pf in prefetches)
-        return list(prefetches)
-
-    def get_sideloadable_page_from_queryset(self, queryset):
+        if not relations_to_sideload:
+            raise ValueError("relations_to_sideload is required")
         # this works wonders, but can't be used when page is paginated...
         sideloadable_page = {self._primary_field_name: queryset}
-        for relation, source_keys in self.relations_to_sideload.items():
+
+        for relation, source_keys in relations_to_sideload.items():
             field = self._sideloadable_fields[relation]
-            field_source = field.child.source or relation
+            field_source = field.child.source
+            source_model = field.child.Meta.model
+            related_ids = set()
+            if isinstance(relations_sources.get(relation), dict):
+                for src_key, src in relations_sources[relation].items():
+                    if not (source_keys is None or src_key in source_keys or src_key == "__all__"):
+                        raise ValueError(f"Unexpected relation source '{src_key}' used")
+                    related_ids |= set(queryset.values_list(src, flat=True))
+            else:
+                related_ids |= set(queryset.values_list(field_source or relations_sources[relation], flat=True))
 
-            if not isinstance(self._sideloadable_fields[relation], ListSerializer):
-                raise RuntimeError("SideLoadable field '{}' must be set as many=True".format(relation))
-
-            if not getattr(field.child, "source", None):
-                if relation not in sideloadable_page:
-                    sideloadable_page[relation] = set()
-
-                # TODO: case when no or all keys are present, use the __all__ prefetch if present,
-                #  else loop through all the relations.
-                # TODO: the correct field might be relation even if source is present
-                #  Check this usage.
-
-                for source_key in source_keys or [field_source]:
-                    sideloadable_page[relation] |= self.filter_related_objects(
-                        related_objects=queryset, lookup=source_key
-                    )
-                continue
-
-            # find all related object ids
-            sideloadable_page[relation] = self.filter_related_objects(related_objects=queryset, lookup=field_source)
+            sideloadable_page[field_source or relation] = source_model.objects.filter(id__in=related_ids)
 
         return sideloadable_page
 
-    def get_sideloadable_page(self, page):
+    def get_sideloadable_page(self, page, relations_to_sideload: Dict, relations_sources: Dict):
+        """
+        Populates page with sideloaded data by collecting distinct values form sideloaded data
+        """
         sideloadable_page = {self._primary_field_name: page}
-        for relation, source_keys in self.relations_to_sideload.items():
-            field = self._sideloadable_fields[relation]
-            field_source = field.child.source or relation
+        for relation, source_keys in relations_to_sideload.items():
 
             # fixme:  field.source can't be used in case prefetces with "to_attr" other than source is used
+            field = self._sideloadable_fields[relation]
+            field_source = field.child.source
 
             if not isinstance(field, ListSerializer):
                 raise RuntimeError("SideLoadable field '{}' must be set as many=True".format(relation))
@@ -314,12 +245,21 @@ class SideloadableRelationsMixin(object):
             # TODO: the correct field might be relation even if source is present
             #  Check this usage.
 
-            for source_key in source_keys or [field_source]:
-                sideloadable_page[relation] |= self.filter_related_objects(related_objects=page, lookup=source_key)
+            if isinstance(relations_sources.get(relation), dict):
+                for src_key, src in relations_sources[relation].items():
+                    if not (source_keys is None or src_key in source_keys or src_key == "__all__"):
+                        raise ValueError(f"Unexpected relation source '{src_key}' used")
+                    sideloadable_page[field_source or relation] |= self.filter_related_objects(
+                        related_objects=page, lookup=src
+                    )
+            else:
+                sideloadable_page[field_source or relation] |= self.filter_related_objects(
+                    related_objects=page, lookup=field_source or relations_sources[relation]
+                )
 
         return sideloadable_page
 
-    def get_sideloadable_object_as_queryset(self):
+    def get_sideloadable_object_as_queryset(self, relations_to_sideload):
         """
         mimics DRF original method get_object()
         Returns the object the view is displaying with sideloaded models prefetched.
@@ -330,9 +270,14 @@ class SideloadableRelationsMixin(object):
         """
         # Add prefetches if applicable
         queryset = self.get_queryset()
-        prefetch_relations = self.get_relevant_prefetches()
+        prefetch_relations, relations_sources = self._get_relevant_prefetches(
+            sideloadable_fields=self._sideloadable_fields,
+            relations_to_sideload=relations_to_sideload,
+            cleaned_prefetches=self._prefetches,
+        )
+
         if prefetch_relations:
-            queryset = queryset.prefetch_related(*prefetch_relations)
+            queryset = queryset.prefetch_related(*prefetch_relations.values())
         queryset = self.filter_queryset(queryset)
 
         # Perform the lookup filtering.
@@ -352,11 +297,15 @@ class SideloadableRelationsMixin(object):
         # May raise a permission denied
         self.check_object_permissions(self.request, obj)
 
-        return queryset
+        return queryset, relations_sources
 
     def filter_related_objects(self, related_objects, lookup):
         current_lookup, remaining_lookup = lookup.split("__", 1) if "__" in lookup else (lookup, None)
-        lookup_values = [getattr(r, current_lookup) for r in related_objects if getattr(r, current_lookup) is not None]
+        lookup_values = [
+            getattr(r, current_lookup) for r in related_objects if getattr(r, current_lookup, None) is not None
+        ]
+
+        # TODO: make sure this follows the new logic (fetching from source or prefetch to_attr)
 
         if lookup_values:
             if lookup_values[0].__class__.__name__ in ["ManyRelatedManager", "RelatedManager"]:
@@ -371,3 +320,253 @@ class SideloadableRelationsMixin(object):
         if remaining_lookup:
             return self.filter_related_objects(related_objects_set, remaining_lookup)
         return set(related_objects_set) - {"", None}
+
+    # internal_methods:
+
+    def _clean_prefetches(self, relation, value, ensure_list=False):
+        if not value:
+            raise ValueError(f"Sideloadable field '{relation}' prefetch or source must be set!")
+        elif isinstance(value, str):
+            cleaned_value = value
+        elif isinstance(value, list):
+            cleaned_value = [self._clean_prefetches(relation=relation, value=val) for val in value]
+            # filter out empty values
+            cleaned_value = [val for val in cleaned_value if val]
+        elif isinstance(value, dict):
+            if "lookup" not in value:
+                raise ValueError(f"Sideloadable field '{relation}' Prefetch 'lookup' must be set!")
+            # if value.get("to_attr") and field.child.source and field.child.source != value.get("to_attr"):
+            #     raise ValueError(f"Sideloadable field '{relation}' Prefetch 'lookup' must be set!")
+            # if "queryset" not in prefetches:
+            #     raise ValueError(f"Sideloadable field '{relation}' Prefetch 'queryset' must be set!")
+            if value.get("queryset") or value.get("to_attr"):
+                if not value.get("to_attr"):
+                    value["to_attr"] = relation
+                cleaned_value = Prefetch(**value)
+            else:
+                cleaned_value = value["lookup"]
+        elif isinstance(value, Prefetch):
+            # check that to_attr is set the same as the field!
+            # TODO: new method of fetching the values should not require this
+            # if not value.to_attr:
+            #     if value.prefetch_to != relation:
+            #         raise ValueError(f"Sideloadable field '{relation}' Prefetch 'to_attr' must be set!")
+            # elif value.to_attr != relation:
+            #     raise ValueError(f"Sideloadable field '{relation}' Prefetch 'to_attr' must match the field name!")
+            cleaned_value = value
+        else:
+            raise ValueError("Sideloadable prefetch values must be a list of strings or Prefetch objects")
+
+        if ensure_list:
+            if not cleaned_value:
+                return []
+            elif not isinstance(cleaned_value, list):
+                return [cleaned_value]
+
+        return cleaned_value
+
+    def _gather_all_prefetches(self, sideloadable_fields: Dict, user_defined_prefetches: Optional[Dict]) -> Dict:
+        """
+        this method finds all prefetches required and checks if they are correctly defined
+        """
+        cleaned_prefetches = {}
+
+        if not sideloadable_fields:
+            raise ValueError("'sideloadable_fields' is a required argument")
+
+        if not user_defined_prefetches:
+            user_defined_prefetches = {}
+
+        # find prefetches for all sideloadable relations
+        for relation, field in sideloadable_fields.items():
+            user_prefetches = user_defined_prefetches.get(relation)
+            if relation in user_defined_prefetches and not user_prefetches:
+                raise ValueError(f"prefetches for field '{relation}' have been left empty")
+            elif not user_prefetches:
+                if getattr(field.child, "source", None):
+                    # default to field source if not defined by user
+                    cleaned_prefetches[relation] = [field.child.source]
+                elif getattr(self.get_serializer_class().Meta.model, relation, None):
+                    # default to parent serializer model field with the relation name if it exists
+                    cleaned_prefetches[relation] = [relation]
+                else:
+                    raise ValueError(f"Either source or prefetches must be set for sideloadable field '{relation}'")
+            elif isinstance(user_prefetches, (str, list, Prefetch)):
+                cleaned_prefetches[relation] = self._clean_prefetches(
+                    relation=relation, value=user_prefetches, ensure_list=True
+                )
+            elif isinstance(user_prefetches, dict):
+                # This is a multi source field!
+                # make prefetches for all relations separately
+                cleaned_prefetches[relation] = {}
+                for rel, rel_prefetches in user_prefetches.items():
+                    relation_prefetches = self._clean_prefetches(relation=rel, value=rel_prefetches, ensure_list=True)
+                    cleaned_prefetches[relation][rel] = relation_prefetches
+            else:
+                raise NotImplementedError(f"prefetch with type '{type(user_prefetches)}' is not implemented")
+
+        # TODO: check for Prefetch objects with the save 'to_attr'
+        #  maybe it better to check this wihte requesting because it won't be an issue until they clash.
+
+        return cleaned_prefetches
+
+    def _add_prefetch(self, prefetches: Dict, prefetch: Union[str, Prefetch]) -> str:
+        # add prefetch to prefetches dict and return the prefetch_attr
+        # TODO: merge multi source prefetches if possible
+        # TODO: check Prefetch vs str type prefeches.
+
+        if isinstance(prefetch, str):
+            prefetch_attr = prefetch
+        elif isinstance(prefetch, Prefetch):
+            prefetch_attr = prefetch.to_attr or prefetch.prefetch_through
+        else:
+            raise NotImplementedError(f"Adding '{type(prefetch)}' type object to prefetches has not been implemented")
+
+        existing_prefetch = prefetches.get(prefetch_attr)
+
+        if not existing_prefetch:
+            prefetches[prefetch_attr] = prefetch
+        elif isinstance(existing_prefetch, str):
+            if prefetch != prefetches[prefetch_attr]:
+                raise ValueError("Two different prefetches for the same attribute")
+        elif isinstance(existing_prefetch, Prefetch):
+            if prefetch.queryset != existing_prefetch.queryset:
+                raise ValueError("Prefetch with queryset overwriting existing prefetch")
+            # todo: find other clashing prefetch cases
+
+        return prefetch_attr
+
+    def _get_relevant_prefetches(
+        self, sideloadable_fields: Dict, relations_to_sideload: Dict, cleaned_prefetches: Dict
+    ) -> Tuple[Dict, Dict]:
+        """
+        Collects all relevant prefetches and returns
+        compressed prefetches and sources per relation to be used later.
+        """
+
+        relations_sources = {}
+        gathered_prefetches = {}
+
+        if not sideloadable_fields:
+            raise ValueError("'sideloadable_fields' is a required argument")
+        if not relations_to_sideload:
+            raise ValueError("'relations_to_sideload' is a required argument")
+        if not cleaned_prefetches:
+            raise ValueError("'cleaned_prefetches' is a required argument")
+
+        for relation, requested_sources in relations_to_sideload.items():
+            relation_prefetches = cleaned_prefetches.get(relation)
+            field_source = sideloadable_fields[relation].child.source
+            data_source = field_source
+
+            # gather prefetches and sources
+            if relation_prefetches is None:
+                # TODO: check primary serializer model for direct source?
+                #  else allow to fail with invalid prefetch
+                # prefetch_attr = self._add_prefetch(
+                #     prefetches=gathered_prefetches, prefetch=sideloadable_fields[relation].child.source or relation
+                # )
+                # relations_sources[relation] = [prefetch_attr]
+                raise ValueError(
+                    f"Missing prefetch for field '{relation}'. Check '_gather_all_prefetches' works correctly"
+                )
+            elif isinstance(relation_prefetches, list):
+                # No multi source used, load from source unless Prefetch object used
+                if requested_sources:
+                    raise ValueError(f"Got 'requested_sources' for field '{relation}' without MultiSource prefetches")
+
+                # find source
+                if data_source:
+                    pass
+                elif len(relation_prefetches) != 1:
+                    raise ValueError(
+                        f"Unless source is defined or the field name matches the model, "
+                        f"there can only be one prefetch, to define the relation"
+                    )
+                elif isinstance(relation_prefetches[0], str):
+                    data_source = relation_prefetches[0]
+                elif isinstance(relation_prefetches[0], Prefetch):
+                    data_source = relation_prefetches[0].to_attr or relation_prefetches[0].prefetch_through
+                else:
+                    raise ValueError(
+                        f"Unless source is defined or the field name matches the model, "
+                        f"There can only be one prefetch, to define the relation and it must be a string or Prefetch"
+                    )
+
+                if any(isinstance(prefetch, Prefetch) for prefetch in relation_prefetches):
+                    # load data from Prefetch.to_attr object used
+                    if len(relation_prefetches) != 1:
+                        raise ValueError(
+                            "If Prefetch is used, there can only one prefetch. "
+                            "Others must be defined within Prefetch.queryset"
+                        )
+                    # take values from Prefetch.to_attr
+                    prefetch_attr = self._add_prefetch(prefetches=gathered_prefetches, prefetch=relation_prefetches[0])
+                    relations_sources[relation] = data_source or prefetch_attr
+                else:
+                    # all prefetches are strings:
+
+                    # find source
+                    if not data_source:
+                        if getattr(self.get_serializer_class().Meta.model, relation, None):
+                            data_source = relation
+                        elif len(relation_prefetches) == 1:
+                            data_source = relation_prefetches[0]
+                        else:
+                            raise ValueError(
+                                f"Unless source is defined or the field name matches the model, "
+                                f"there can only be one prefetch, to define the relation"
+                            )
+
+                    for prefetch in relation_prefetches:
+                        self._add_prefetch(prefetches=gathered_prefetches, prefetch=prefetch)
+                    relations_sources[relation] = data_source
+
+            # if not field_source
+            elif isinstance(relation_prefetches, dict):
+                # its a MultiSource field, fetch values from sources defined with prefetches.
+                if field_source:
+                    raise ValueError("Multi source field with source defined in serializer.")
+
+                if requested_sources:
+                    for invalid_source_key in set(requested_sources) - set(relation_prefetches.keys()):
+                        raise ValidationError(
+                            f"source '{invalid_source_key}' has not been implemented for sideloadable field '{relation}'"
+                        )
+                elif "__all__" in relation_prefetches:
+                    # TODO: find source in case it's not a Prefetch object.
+                    requested_sources = [relation_prefetches["__all__"].to_attr]
+                    raise NotImplementedError("default prefetch for all in not implemented")
+                elif relation_prefetches:
+                    requested_sources = list(relation_prefetches.keys())
+                else:
+                    raise ValueError(f"Prefetches missing")
+
+                # collect field prefetches and sources
+                relations_sources[relation] = dict()
+                for source_key in requested_sources:
+                    if relations_sources[relation].get(source_key):
+                        raise ValueError(
+                            "Multiple sources defined for single multi source field. "
+                            "Prefetch or select related within Prefetch queryset."
+                        )
+                    for source_prefetch in relation_prefetches[source_key]:
+                        if not isinstance(source_prefetch, list):
+                            source_prefetch = [source_prefetch]
+                        if len(source_prefetch) > 1:
+                            raise NotImplementedError(
+                                "prefetching for multi source fields is not implemented. "
+                                "Prefetch or select related within Prefetch queryset."
+                            )
+                        for prefetch in source_prefetch:
+                            prefetch_attr = self._add_prefetch(prefetches=gathered_prefetches, prefetch=prefetch)
+                            relations_sources[relation][source_key] = prefetch_attr
+            else:
+                raise NotImplementedError(
+                    f"Sideloading with prefetch type {type(relation_prefetches)} has not been implemented"
+                )
+
+            if not relations_sources[relation]:
+                raise ValueError("Source not found")
+
+        return gathered_prefetches, relations_sources

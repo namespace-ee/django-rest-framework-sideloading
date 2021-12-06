@@ -1,6 +1,5 @@
 from rest_framework import serializers
 
-from drf_sideloading.mixins import MultiSourceSerializerMixin
 from drf_sideloading.serializers import SideLoadableSerializer
 from tests.models import Supplier, Category, Product, Partner
 
@@ -9,10 +8,6 @@ class SupplierSerializer(serializers.ModelSerializer):
     class Meta:
         model = Supplier
         fields = ["name"]
-
-
-class MultiSourceSupplierSerializer(MultiSourceSerializerMixin, SupplierSerializer):
-    pass
 
 
 class PartnerSerializer(serializers.ModelSerializer):
@@ -54,7 +49,7 @@ class ProductSideloadableSerializer(SideLoadableSerializer):
     main_suppliers = SupplierSerializer(source="supplier", many=True)
     backup_suppliers = SupplierSerializer(source="backup_supplier", many=True)
     partners = PartnerSerializer(source="partner", many=True)
-    combined_suppliers = MultiSourceSupplierSerializer(sources=["supplier", "backup_supplier"], many=True)
+    combined_suppliers = SupplierSerializer(many=True)
 
     class Meta:
         primary = "products"
@@ -64,5 +59,8 @@ class ProductSideloadableSerializer(SideLoadableSerializer):
             "backup_suppliers": "backup_supplier",
             "partners": "partners",
             # These can be defined to always load them, else they will be copied over form all sources or selected sources only.
-            # "combined_suppliers": ["supplier", "backup_supplier"]
+            "combined_suppliers": {
+                "suppliers": ["supplier"],
+                "backup_supplier": ["backup_supplier"],
+            },
         }
