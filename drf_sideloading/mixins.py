@@ -2,7 +2,7 @@ import copy
 import itertools
 import re
 from itertools import chain
-from typing import List, Dict, Optional, Union, Tuple
+from typing import List, Dict, Optional, Union, Tuple, Set
 
 from django.db.models import Prefetch
 from rest_framework.exceptions import ValidationError
@@ -300,7 +300,7 @@ class SideloadableRelationsMixin(object):
 
         return queryset, relations_sources
 
-    def filter_related_objects(self, related_objects, lookup):
+    def filter_related_objects(self, related_objects, lookup: Optional[str]) -> Set:
         current_lookup, remaining_lookup = lookup.split("__", 1) if "__" in lookup else (lookup, None)
         lookup_values = [
             getattr(r, current_lookup) for r in related_objects if getattr(r, current_lookup, None) is not None
@@ -319,7 +319,7 @@ class SideloadableRelationsMixin(object):
             related_objects_set = set()
 
         if remaining_lookup:
-            return self.filter_related_objects(related_objects_set, remaining_lookup)
+            return self.filter_related_objects(related_objects=related_objects_set, lookup=remaining_lookup)
         return set(related_objects_set) - {"", None}
 
     # internal_methods:
@@ -491,10 +491,13 @@ class SideloadableRelationsMixin(object):
                 if data_source:
                     pass
                 elif len(relation_prefetches) != 1:
-                    raise ValueError(
-                        f"Unless source is defined or the field name matches the model, "
-                        f"there can only be one prefetch, to define the relation"
-                    )
+                    if any(pf == relation for pf in relation_prefetches):
+                        data_source = relation
+                    else:
+                        raise ValueError(
+                            f"Unless source is defined or the field name matches the model, "
+                            f"there can only be one prefetch, to define the relation"
+                        )
                 elif isinstance(relation_prefetches[0], str):
                     data_source = relation_prefetches[0]
                 elif isinstance(relation_prefetches[0], Prefetch):
@@ -524,6 +527,8 @@ class SideloadableRelationsMixin(object):
                             data_source = relation
                         elif len(relation_prefetches) == 1:
                             data_source = relation_prefetches[0]
+                        elif any(pf == relation for pf in relation_prefetches):
+                            data_source = relation
                         else:
                             raise ValueError(
                                 f"Unless source is defined or the field name matches the model, "

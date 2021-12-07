@@ -538,10 +538,10 @@ class TestDrfSideloadingValidPrefetches(BaseTestCase):
             products = ProductSerializer(many=True)
             categories = CategorySerializer(source="category", many=True)
             suppliers = SupplierSerializer(source="supplier", many=True)
-            filtered_suppliers = SupplierSerializer(many=True, read_only=True)
-            filtered_suppliers2 = SupplierSerializer(many=True, read_only=True)
+            filtered_suppliers = SupplierSerializer(many=True)
+            filtered_suppliers2 = SupplierSerializer(many=True)
             partners = PartnerSerializer(many=True)
-            filtered_partners = PartnerSerializer(many=True, read_only=True)
+            filtered_partners = PartnerSerializer(many=True)
             combined_suppliers = SupplierSerializer(many=True)
 
             class Meta:
@@ -601,6 +601,7 @@ class TestDrfSideloadingValidPrefetches(BaseTestCase):
         self.assertSetEqual({"Partner1", "Partner2", "Partner3", "Partner4"}, partner_names)
 
     # # fixme: for some reason, the filtered_suppliers is not sideloaded altho Prefetch present in queryset arguments
+    # #  because queryset is called as a generator maybe? In that case, the prefetches do nothing
     # def test_sideloading_normally(self):
     #     response_1 = self.client.get(
     #         path=reverse("product-list"),
