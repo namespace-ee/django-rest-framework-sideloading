@@ -210,6 +210,8 @@ class SideloadableRelationsMixin(object):
             field = self._sideloadable_fields[relation]
             field_source = field.child.source
             source_model = field.child.Meta.model
+            relation_key = field_source or relation
+
             related_ids = set()
             if isinstance(relations_sources.get(relation), dict):
                 for src_key, src in relations_sources[relation].items():
@@ -219,7 +221,7 @@ class SideloadableRelationsMixin(object):
             else:
                 related_ids |= set(queryset.values_list(field_source or relations_sources[relation], flat=True))
 
-            sideloadable_page[field_source or relation] = source_model.objects.filter(id__in=related_ids)
+            sideloadable_page[relation_key] = source_model.objects.filter(id__in=related_ids)
 
         return sideloadable_page
 
@@ -233,12 +235,13 @@ class SideloadableRelationsMixin(object):
             # fixme:  field.source can't be used in case prefetces with "to_attr" other than source is used
             field = self._sideloadable_fields[relation]
             field_source = field.child.source
+            relation_key = field_source or relation
 
             if not isinstance(field, ListSerializer):
                 raise RuntimeError("SideLoadable field '{}' must be set as many=True".format(relation))
 
             if relation not in sideloadable_page:
-                sideloadable_page[relation] = set()
+                sideloadable_page[relation_key] = set()
 
             # TODO: case when no or all keys are present, use the __all__ prefetch if present,
             #  else loop through all the relations.
@@ -249,11 +252,9 @@ class SideloadableRelationsMixin(object):
                 for src_key, src in relations_sources[relation].items():
                     if not (source_keys is None or src_key in source_keys or src_key == "__all__"):
                         raise ValueError(f"Unexpected relation source '{src_key}' used")
-                    sideloadable_page[field_source or relation] |= self.filter_related_objects(
-                        related_objects=page, lookup=src
-                    )
+                    sideloadable_page[relation_key] |= self.filter_related_objects(related_objects=page, lookup=src)
             else:
-                sideloadable_page[field_source or relation] |= self.filter_related_objects(
+                sideloadable_page[relation_key] |= self.filter_related_objects(
                     related_objects=page, lookup=field_source or relations_sources[relation]
                 )
 
@@ -323,20 +324,23 @@ class SideloadableRelationsMixin(object):
 
     # internal_methods:
 
-    def _clean_prefetches(self, relation, value, ensure_list=False):
+    def _clean_prefetches(self, field, relation, value, ensure_list=False):
         if not value:
             raise ValueError(f"Sideloadable field '{relation}' prefetch or source must be set!")
         elif isinstance(value, str):
             cleaned_value = value
         elif isinstance(value, list):
-            cleaned_value = [self._clean_prefetches(relation=relation, value=val) for val in value]
+            cleaned_value = [self._clean_prefetches(field=field, relation=relation, value=val) for val in value]
             # filter out empty values
             cleaned_value = [val for val in cleaned_value if val]
         elif isinstance(value, dict):
             if "lookup" not in value:
                 raise ValueError(f"Sideloadable field '{relation}' Prefetch 'lookup' must be set!")
-            # if value.get("to_attr") and field.child.source and field.child.source != value.get("to_attr"):
-            #     raise ValueError(f"Sideloadable field '{relation}' Prefetch 'lookup' must be set!")
+            if value.get("to_attr") and field.child.source and field.child.source != value.get("to_attr"):
+                raise ValueError(
+                    f"Sideloadable field '{relation}' Prefetch 'to_attr' can't be used with source defined. "
+                    f"Remove source from field serializer."
+                )
             # if "queryset" not in prefetches:
             #     raise ValueError(f"Sideloadable field '{relation}' Prefetch 'queryset' must be set!")
             if value.get("queryset") or value.get("to_attr"):
@@ -348,6 +352,11 @@ class SideloadableRelationsMixin(object):
         elif isinstance(value, Prefetch):
             # check that to_attr is set the same as the field!
             # TODO: new method of fetching the values should not require this
+            if value.to_attr and field.child.source and field.child.source != value.to_attr:
+                raise ValueError(
+                    f"Sideloadable field '{relation}' Prefetch 'to_attr' can't be different from source defined. "
+                    f"Tip: Remove source from field serializer."
+                )
             # if not value.to_attr:
             #     if value.prefetch_to != relation:
             #         raise ValueError(f"Sideloadable field '{relation}' Prefetch 'to_attr' must be set!")
@@ -380,12 +389,13 @@ class SideloadableRelationsMixin(object):
         # find prefetches for all sideloadable relations
         for relation, field in sideloadable_fields.items():
             user_prefetches = user_defined_prefetches.get(relation)
+            field_source = field.child.source
             if relation in user_defined_prefetches and not user_prefetches:
                 raise ValueError(f"prefetches for field '{relation}' have been left empty")
             elif not user_prefetches:
-                if getattr(field.child, "source", None):
+                if field_source:
                     # default to field source if not defined by user
-                    cleaned_prefetches[relation] = [field.child.source]
+                    cleaned_prefetches[relation] = [field_source]
                 elif getattr(self.get_serializer_class().Meta.model, relation, None):
                     # default to parent serializer model field with the relation name if it exists
                     cleaned_prefetches[relation] = [relation]
@@ -393,14 +403,16 @@ class SideloadableRelationsMixin(object):
                     raise ValueError(f"Either source or prefetches must be set for sideloadable field '{relation}'")
             elif isinstance(user_prefetches, (str, list, Prefetch)):
                 cleaned_prefetches[relation] = self._clean_prefetches(
-                    relation=relation, value=user_prefetches, ensure_list=True
+                    field=field, relation=relation, value=user_prefetches, ensure_list=True
                 )
             elif isinstance(user_prefetches, dict):
                 # This is a multi source field!
                 # make prefetches for all relations separately
                 cleaned_prefetches[relation] = {}
                 for rel, rel_prefetches in user_prefetches.items():
-                    relation_prefetches = self._clean_prefetches(relation=rel, value=rel_prefetches, ensure_list=True)
+                    relation_prefetches = self._clean_prefetches(
+                        field=field, relation=rel, value=rel_prefetches, ensure_list=True
+                    )
                     cleaned_prefetches[relation][rel] = relation_prefetches
             else:
                 raise NotImplementedError(f"prefetch with type '{type(user_prefetches)}' is not implemented")
