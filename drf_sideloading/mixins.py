@@ -18,62 +18,111 @@ from drf_sideloading.serializers import SideLoadableSerializer
 class SideloadableRelationsMixin(object):
     query_param_name = "sideload"
     sideloading_serializer_class = None
+
+    # used internally
+    _sideloading_serializer_class = None
     _primary_field_name = None
     _sideloadable_fields = None
     _prefetches = None
 
     def __init__(self, **kwargs):
-        self.check_sideloading_serializer_class()
-        self._primary_field_name = self.get_primary_field_name()
-        self._sideloadable_fields = self.get_sideloadable_fields()
-        self._prefetches = self._gather_all_prefetches(
-            sideloadable_fields=self._sideloadable_fields,
-            user_defined_prefetches=getattr(self.sideloading_serializer_class.Meta, "prefetches", None),
-        )
         super(SideloadableRelationsMixin, self).__init__(**kwargs)
 
-    def check_sideloading_serializer_class(self):
+    # These methods keep the serializer data that is used for sideloading
+    def get_sideloading_serializer_class(self):
+        """
+        Used to select a different serializer based on the incoming request.
+        either set the self.sideloading_serializer_class to the required serializer
+        OR set self._sideloading_serializer_class and run self.initialize_with_serializer with that class
+        """
+
+        if self._sideloading_serializer_class:
+            return self._sideloading_serializer_class
+
+        if self.sideloading_serializer_class:
+            self.initialize_with_serializer(serializer_class=self.sideloading_serializer_class)
+            return self.sideloading_serializer_class
+
+        raise ValueError(
+            f"'{self.__class__.__name__}' should either include a `sideloading_serializer_class` attribute "
+            f"or define one using `sideloading_serializer_class()` method"
+        )
+
+    def initialize_with_serializer(self, serializer_class):
+        if self._sideloading_serializer_class:
+            raise NotImplementedError("re-initiation is not implemented")
+        self.check_sideloading_serializer_class(serializer_class=serializer_class)
+        # primary field
+        self._primary_field_name = serializer_class.Meta.primary
+        # sideloadable fields
+        self._sideloadable_fields = copy.deepcopy(serializer_class._declared_fields)
+        self._sideloadable_fields.pop(self._primary_field_name)
+        # cleaned prefetches
+        self._prefetches = self._gather_all_prefetches(
+            sideloadable_fields=self._sideloadable_fields,
+            user_defined_prefetches=getattr(serializer_class.Meta, "prefetches", None),
+        )
+        # initialized:
+        self._sideloading_serializer_class = serializer_class
+
+    def get_primary_field_name(self):
+        # TODO: for nor just initialize,
+        #  but this should raise an error if called before sideloading serializer in initialized
+        if not self._sideloading_serializer_class:
+            self.get_sideloading_serializer_class()
+        return self._primary_field_name
+
+    def get_sideloadable_fields(self):
+        # TODO: for nor just initialize,
+        #  but this should raise an error if called before sideloading serializer in initialized
+        if not self._sideloading_serializer_class:
+            self.get_sideloading_serializer_class()
+        return self._sideloadable_fields
+
+    def get_prefetches(self):
+        # TODO: for nor just initialize,
+        #  but this should raise an error if called before sideloading serializer in initialized
+        if not self._sideloading_serializer_class:
+            self.get_sideloading_serializer_class()
+        return self._prefetches
+
+    # sideloading methods:
+
+    # fixme: move these checks to SideloadableSerializer mixin?
+    def check_sideloading_serializer_class(self, serializer_class):
         assert (
-            self.sideloading_serializer_class is not None
+            serializer_class is not None
         ), "'{}' should either include a `sideloading_serializer_class` attribute, ".format(self.__class__.__name__)
         assert issubclass(
-            self.sideloading_serializer_class, SideLoadableSerializer
+            serializer_class, SideLoadableSerializer
         ), "'{}' `sideloading_serializer_class` must be a SideLoadableSerializer subclass".format(
             self.__class__.__name__
         )
-        assert not getattr(
-            self.sideloading_serializer_class, "many", None
-        ), "Sideloadable serializer can not be 'many=True'!"
+        assert not getattr(serializer_class, "many", None), "Sideloadable serializer can not be 'many=True'!"
 
         # Check Meta class
         assert hasattr(
-            self.sideloading_serializer_class, "Meta"
+            serializer_class, "Meta"
         ), "Sideloadable serializer must have a Meta class defined with the 'primary' field name!"
         assert getattr(
-            self.sideloading_serializer_class.Meta, "primary", None
+            serializer_class.Meta, "primary", None
         ), "Sideloadable serializer must have a Meta attribute called primary!"
         assert (
-            self.sideloading_serializer_class.Meta.primary in self.sideloading_serializer_class._declared_fields
+            serializer_class.Meta.primary in serializer_class._declared_fields
         ), "Sideloadable serializer Meta.primary must point to a field in the serializer!"
-        if getattr(self.sideloading_serializer_class.Meta, "prefetches", None) is not None:
+        if getattr(serializer_class.Meta, "prefetches", None) is not None:
             assert isinstance(
-                self.sideloading_serializer_class.Meta.prefetches, dict
+                serializer_class.Meta.prefetches, dict
             ), "Sideloadable serializer Meta attribute 'prefetches' must be a dict."
 
         # check serializer fields:
-        for name, field in self.sideloading_serializer_class._declared_fields.items():
+        for name, field in serializer_class._declared_fields.items():
             assert getattr(field, "many", None), "SideLoadable field '{}' must be set as many=True".format(name)
             assert isinstance(
                 field.child, ModelSerializer
             ), "SideLoadable field '{}' serializer must be inherited from ModelSerializer".format(name)
 
-    def get_primary_field_name(self):
-        return self.sideloading_serializer_class.Meta.primary
-
-    def get_sideloadable_fields(self):
-        sideloadable_fields = copy.deepcopy(self.sideloading_serializer_class._declared_fields)
-        sideloadable_fields.pop(self._primary_field_name)
-        return sideloadable_fields
+    # modified DRF methods
 
     def initialize_request(self, request, *args, **kwargs):
         request = super(SideloadableRelationsMixin, self).initialize_request(request=request, *args, **kwargs)
@@ -108,9 +157,9 @@ class SideloadableRelationsMixin(object):
 
         # Add prefetches if applicable
         prefetch_relations, relations_sources = self._get_relevant_prefetches(
-            sideloadable_fields=self._sideloadable_fields,
+            sideloadable_fields=self.get_sideloadable_fields(),
             relations_to_sideload=relations_to_sideload,
-            cleaned_prefetches=self._prefetches,
+            cleaned_prefetches=self.get_prefetches(),
         )
 
         if prefetch_relations:
@@ -125,7 +174,7 @@ class SideloadableRelationsMixin(object):
                 relations_to_sideload=relations_to_sideload,
                 relations_sources=relations_sources,
             )
-            serializer = self.sideloading_serializer_class(
+            serializer = self.get_sideloading_serializer_class()(
                 instance=sideloadable_page,
                 relations_to_sideload=relations_to_sideload,
                 context={"request": request},
@@ -137,7 +186,7 @@ class SideloadableRelationsMixin(object):
                 relations_to_sideload=relations_to_sideload,
                 relations_sources=relations_sources,
             )
-            serializer = self.sideloading_serializer_class(
+            serializer = self.get_sideloading_serializer_class()(
                 instance=sideloadable_page,
                 relations_to_sideload=relations_to_sideload,
                 context={"request": request},
@@ -160,7 +209,7 @@ class SideloadableRelationsMixin(object):
         sideloadable_page = self.get_sideloadable_page_from_queryset(
             queryset=queryset, relations_to_sideload=relations_to_sideload, relations_sources=relations_sources
         )
-        serializer = self.sideloading_serializer_class(
+        serializer = self.get_sideloading_serializer_class()(
             instance=sideloadable_page,
             relations_to_sideload=relations_to_sideload,
             context={"request": request},
@@ -182,7 +231,7 @@ class SideloadableRelationsMixin(object):
         response changed to dict as the sources for multi source fields must be selectable.
 
         """
-        sideloadable_relations = set(self._sideloadable_fields.keys())
+        sideloadable_relations = set(self.get_sideloadable_fields().keys())
 
         relations_to_sideload = {}
         for param in re.split(",\s*(?![^\[\]]*\])", sideload_parameter):
@@ -204,10 +253,10 @@ class SideloadableRelationsMixin(object):
         if not relations_to_sideload:
             raise ValueError("relations_to_sideload is required")
         # this works wonders, but can't be used when page is paginated...
-        sideloadable_page = {self._primary_field_name: queryset}
+        sideloadable_page = {self.get_primary_field_name(): queryset}
 
         for relation, source_keys in relations_to_sideload.items():
-            field = self._sideloadable_fields[relation]
+            field = self.get_sideloadable_fields()[relation]
             field_source = field.child.source
             source_model = field.child.Meta.model
             relation_key = field_source or relation
@@ -229,11 +278,11 @@ class SideloadableRelationsMixin(object):
         """
         Populates page with sideloaded data by collecting distinct values form sideloaded data
         """
-        sideloadable_page = {self._primary_field_name: page}
+        sideloadable_page = {self.get_primary_field_name(): page}
         for relation, source_keys in relations_to_sideload.items():
 
             # fixme:  field.source can't be used in case prefetces with "to_attr" other than source is used
-            field = self._sideloadable_fields[relation]
+            field = self.get_sideloadable_fields()[relation]
             field_source = field.child.source
             relation_key = field_source or relation
 
@@ -272,9 +321,9 @@ class SideloadableRelationsMixin(object):
         # Add prefetches if applicable
         queryset = self.get_queryset()
         prefetch_relations, relations_sources = self._get_relevant_prefetches(
-            sideloadable_fields=self._sideloadable_fields,
+            sideloadable_fields=self.get_sideloadable_fields(),
             relations_to_sideload=relations_to_sideload,
-            cleaned_prefetches=self._prefetches,
+            cleaned_prefetches=self.get_prefetches(),
         )
 
         if prefetch_relations:
@@ -442,6 +491,7 @@ class SideloadableRelationsMixin(object):
             if prefetch != prefetches[prefetch_attr]:
                 raise ValueError("Two different prefetches for the same attribute")
         elif isinstance(existing_prefetch, Prefetch):
+            # TODO: check for matching Prefetches not just a pointer match.
             if prefetch.queryset != existing_prefetch.queryset:
                 raise ValueError("Prefetch with queryset overwriting existing prefetch")
             # todo: find other clashing prefetch cases
