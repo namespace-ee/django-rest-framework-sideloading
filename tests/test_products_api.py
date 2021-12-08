@@ -352,16 +352,13 @@ class TestDrfSideloadingNoMetaClassDefined(BaseTestCase):
         ProductViewSet.sideloading_serializer_class = ProductSideloadableSerializer
 
     def test_correct_exception_raised(self):
-        with self.assertRaises(AssertionError) as cm:
+        expected_error_message = "Sideloadable serializer must have a Meta class defined with the 'primary' field name!"
+        with self.assertRaisesMessage(ValueError, expected_error_message):
             self.client.get(
                 path=reverse("product-list"),
                 data={"sideload": "categories,suppliers,partners"},
                 **self.DEFAULT_HEADERS,
             )
-
-        expected_error_message = "Sideloadable serializer must have a Meta class defined with the 'primary' field name!"
-        raised_exception = cm.exception
-        self.assertEqual(str(raised_exception), expected_error_message)
 
 
 class TestDrfSideloadingNoPrimaryDefined(BaseTestCase):
@@ -383,16 +380,13 @@ class TestDrfSideloadingNoPrimaryDefined(BaseTestCase):
         ProductViewSet.sideloading_serializer_class = ProductSideloadableSerializer
 
     def test_correct_exception_raised(self):
-        with self.assertRaises(AssertionError) as cm:
+        expected_error_message = "Sideloadable serializer must have a Meta class defined with the 'primary' field name!"
+        with self.assertRaisesMessage(ValueError, expected_error_message):
             self.client.get(
                 path=reverse("product-list"),
                 data={"sideload": "categories,suppliers,partners"},
                 **self.DEFAULT_HEADERS,
             )
-
-        expected_error_message = "Sideloadable serializer must have a Meta attribute called primary!"
-        raised_exception = cm.exception
-        self.assertEqual(str(raised_exception), expected_error_message)
 
 
 class TestDrfSideloadingRelationsNotListSerializers(BaseTestCase):
@@ -414,14 +408,11 @@ class TestDrfSideloadingRelationsNotListSerializers(BaseTestCase):
         ProductViewSet.sideloading_serializer_class = ProductSideloadableSerializer
 
     def test_correct_exception_raised(self):
-        with self.assertRaises(AssertionError) as cm:
+        expected_error_message = "SideLoadable field 'categories' must be set as many=True"
+        with self.assertRaisesMessage(ValueError, expected_error_message):
             self.client.get(
                 path=reverse("product-list"), data={"sideload": "categories,suppliers,partners"}, **self.DEFAULT_HEADERS
             )
-
-        expected_error_message = "SideLoadable field 'categories' must be set as many=True"
-        raised_exception = cm.exception
-        self.assertEqual(str(raised_exception), expected_error_message)
 
 
 class TestDrfSideloadingInvalidPrimary(BaseTestCase):
@@ -443,16 +434,13 @@ class TestDrfSideloadingInvalidPrimary(BaseTestCase):
         ProductViewSet.sideloading_serializer_class = ProductSideloadableSerializer
 
     def test_correct_exception_raised(self):
-        with self.assertRaises(AssertionError) as cm:
+        expected_error_message = "Sideloadable serializer Meta.primary must point to a field in the serializer!"
+        with self.assertRaisesMessage(ValueError, expected_error_message):
             self.client.get(
                 path=reverse("product-list"),
                 data={"sideload": "categories,suppliers,partners"},
                 **self.DEFAULT_HEADERS,
             )
-
-        expected_error_message = "Sideloadable serializer Meta.primary must point to a field in the serializer!"
-        raised_exception = cm.exception
-        self.assertEqual(str(raised_exception), expected_error_message)
 
 
 class TestDrfSideloadingInvalidPrefetchesType(BaseTestCase):
@@ -479,16 +467,13 @@ class TestDrfSideloadingInvalidPrefetchesType(BaseTestCase):
         ProductViewSet.sideloading_serializer_class = ProductSideloadableSerializer
 
     def test_correct_exception_raised(self):
-        with self.assertRaises(AssertionError) as cm:
+        expected_error_message = "Sideloadable serializer Meta attribute 'prefetches' must be a dict."
+        with self.assertRaisesMessage(ValueError, expected_error_message):
             self.client.get(
                 path=reverse("product-list"),
                 data={"sideload": "categories,suppliers,partners"},
                 **self.DEFAULT_HEADERS,
             )
-
-        expected_error_message = "Sideloadable serializer Meta attribute 'prefetches' must be a dict."
-        raised_exception = cm.exception
-        self.assertEqual(str(raised_exception), expected_error_message)
 
 
 class TestDrfSideloadingInvalidPrefetchesValuesType(BaseTestCase):

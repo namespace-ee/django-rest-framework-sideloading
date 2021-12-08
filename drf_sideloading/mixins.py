@@ -16,207 +16,51 @@ from drf_sideloading.serializers import SideLoadableSerializer
 
 
 class SideloadableRelationsMixin(object):
-    query_param_name = "sideload"
+    sideloading_query_param_name = "sideload"
     sideloading_serializer_class = None
-
-    # used internally
-    _sideloading_serializer_class = None
-    _primary_field_name = None
-    _sideloadable_fields = None
-    _prefetches = None
 
     def __init__(self, **kwargs):
         super(SideloadableRelationsMixin, self).__init__(**kwargs)
 
-    # These methods keep the serializer data that is used for sideloading
-    def get_sideloading_serializer_class(self):
-        """
-        Used to select a different serializer based on the incoming request.
-        either set the self.sideloading_serializer_class to the required serializer
-        OR set self._sideloading_serializer_class and run self.initialize_with_serializer with that class
-        """
-
-        if self._sideloading_serializer_class:
-            return self._sideloading_serializer_class
-
-        if self.sideloading_serializer_class:
-            self.initialize_with_serializer(serializer_class=self.sideloading_serializer_class)
-            return self.sideloading_serializer_class
-
-        raise ValueError(
-            f"'{self.__class__.__name__}' should either include a `sideloading_serializer_class` attribute "
-            f"or define one using `sideloading_serializer_class()` method"
-        )
-
-    def initialize_with_serializer(self, serializer_class):
-        if self._sideloading_serializer_class:
-            raise NotImplementedError("re-initiation is not implemented")
-        self.check_sideloading_serializer_class(serializer_class=serializer_class)
+    # fixme: This is an awkward method
+    def get_sideloading_variables_from_serializer(self, request):
+        sideloading_serializer_class = self.get_sideloading_serializer_class()
+        self.check_sideloading_serializer_class(serializer_class=sideloading_serializer_class)
         # primary field
-        self._primary_field_name = serializer_class.Meta.primary
+        primary_field_name = sideloading_serializer_class.Meta.primary
         # sideloadable fields
-        self._sideloadable_fields = copy.deepcopy(serializer_class._declared_fields)
-        self._sideloadable_fields.pop(self._primary_field_name)
+        sideloadable_fields = copy.deepcopy(sideloading_serializer_class._declared_fields)
+        sideloadable_fields.pop(primary_field_name)
         # cleaned prefetches
-        self._prefetches = self._gather_all_prefetches(
-            sideloadable_fields=self._sideloadable_fields,
-            user_defined_prefetches=getattr(serializer_class.Meta, "prefetches", None),
+        prefetches = self._gather_all_prefetches(
+            sideloadable_fields=sideloadable_fields,
+            user_defined_prefetches=getattr(sideloading_serializer_class.Meta, "prefetches", None),
         )
-        # initialized:
-        self._sideloading_serializer_class = serializer_class
-
-    def get_primary_field_name(self):
-        # TODO: for nor just initialize,
-        #  but this should raise an error if called before sideloading serializer in initialized
-        if not self._sideloading_serializer_class:
-            self.get_sideloading_serializer_class()
-        return self._primary_field_name
-
-    def get_sideloadable_fields(self):
-        # TODO: for nor just initialize,
-        #  but this should raise an error if called before sideloading serializer in initialized
-        if not self._sideloading_serializer_class:
-            self.get_sideloading_serializer_class()
-        return self._sideloadable_fields
-
-    def get_prefetches(self):
-        # TODO: for nor just initialize,
-        #  but this should raise an error if called before sideloading serializer in initialized
-        if not self._sideloading_serializer_class:
-            self.get_sideloading_serializer_class()
-        return self._prefetches
-
-    # sideloading methods:
-
-    # fixme: move these checks to SideloadableSerializer mixin?
-    def check_sideloading_serializer_class(self, serializer_class):
-        assert (
-            serializer_class is not None
-        ), "'{}' should either include a `sideloading_serializer_class` attribute, ".format(self.__class__.__name__)
-        assert issubclass(
-            serializer_class, SideLoadableSerializer
-        ), "'{}' `sideloading_serializer_class` must be a SideLoadableSerializer subclass".format(
-            self.__class__.__name__
-        )
-        assert not getattr(serializer_class, "many", None), "Sideloadable serializer can not be 'many=True'!"
-
-        # Check Meta class
-        assert hasattr(
-            serializer_class, "Meta"
-        ), "Sideloadable serializer must have a Meta class defined with the 'primary' field name!"
-        assert getattr(
-            serializer_class.Meta, "primary", None
-        ), "Sideloadable serializer must have a Meta attribute called primary!"
-        assert (
-            serializer_class.Meta.primary in serializer_class._declared_fields
-        ), "Sideloadable serializer Meta.primary must point to a field in the serializer!"
-        if getattr(serializer_class.Meta, "prefetches", None) is not None:
-            assert isinstance(
-                serializer_class.Meta.prefetches, dict
-            ), "Sideloadable serializer Meta attribute 'prefetches' must be a dict."
-
-        # check serializer fields:
-        for name, field in serializer_class._declared_fields.items():
-            assert getattr(field, "many", None), "SideLoadable field '{}' must be set as many=True".format(name)
-            assert isinstance(
-                field.child, ModelSerializer
-            ), "SideLoadable field '{}' serializer must be inherited from ModelSerializer".format(name)
-
-    # modified DRF methods
-
-    def initialize_request(self, request, *args, **kwargs):
-        request = super(SideloadableRelationsMixin, self).initialize_request(request=request, *args, **kwargs)
-
         relations_to_sideload = self.parse_query_param(
-            sideload_parameter=request.query_params.get(self.query_param_name, "")
+            sideload_parameter=request.query_params.get(self.sideloading_query_param_name, ""),
+            sideloadable_fields=sideloadable_fields,
         )
-        if request.method == "GET" and relations_to_sideload:
-            # When sideloading disable BrowsableAPIForms
-            if BrowsableAPIRenderer in self.renderer_classes:
-                renderer_classes = (
-                    list(self.renderer_classes) if isinstance(self.renderer_classes, tuple) else self.renderer_classes
-                )
-                renderer_classes = [
-                    BrowsableAPIRendererWithoutForms if r == BrowsableAPIRenderer else r for r in renderer_classes
-                ]
-                self.renderer_classes = renderer_classes
-
-        return request
-
-    def list(self, request, *args, **kwargs):
-        relations_to_sideload = self.parse_query_param(
-            sideload_parameter=request.query_params.get(self.query_param_name, "")
-        )
-
-        # Do not sideload unless params and GET method
-        if request.method != "GET" or not relations_to_sideload:
-            return super(SideloadableRelationsMixin, self).list(request, *args, **kwargs)
-
-        # After this `relations_to_sideload` is safe to use
-        queryset = self.get_queryset()
-
-        # Add prefetches if applicable
-        prefetch_relations, relations_sources = self._get_relevant_prefetches(
-            sideloadable_fields=self.get_sideloadable_fields(),
-            relations_to_sideload=relations_to_sideload,
-            cleaned_prefetches=self.get_prefetches(),
-        )
-
-        if prefetch_relations:
-            queryset = queryset.prefetch_related(*prefetch_relations.values())
-        queryset = self.filter_queryset(queryset)
-
-        # Create page
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            sideloadable_page = self.get_sideloadable_page(
-                page=page,
+        # find applicable prefetches
+        if relations_to_sideload:
+            prefetch_relations, relations_sources = self._get_relevant_prefetches(
+                sideloadable_fields=sideloadable_fields,
                 relations_to_sideload=relations_to_sideload,
-                relations_sources=relations_sources,
+                cleaned_prefetches=prefetches,
             )
-            serializer = self.get_sideloading_serializer_class()(
-                instance=sideloadable_page,
-                relations_to_sideload=relations_to_sideload,
-                context={"request": request},
-            )
-            return self.get_paginated_response(serializer.data)
         else:
-            sideloadable_page = self.get_sideloadable_page_from_queryset(
-                queryset=queryset,
-                relations_to_sideload=relations_to_sideload,
-                relations_sources=relations_sources,
-            )
-            serializer = self.get_sideloading_serializer_class()(
-                instance=sideloadable_page,
-                relations_to_sideload=relations_to_sideload,
-                context={"request": request},
-            )
-            return Response(serializer.data)
-
-    def retrieve(self, request, *args, **kwargs):
-        relations_to_sideload = self.parse_query_param(
-            sideload_parameter=request.query_params.get(self.query_param_name, "")
+            prefetch_relations = None
+            relations_sources = None
+        return (
+            sideloading_serializer_class,
+            primary_field_name,
+            sideloadable_fields,
+            prefetches,
+            relations_to_sideload,
+            prefetch_relations,
+            relations_sources,
         )
 
-        # Do not sideload unless params and GET method
-        if request.method != "GET" or not relations_to_sideload:
-            return super(SideloadableRelationsMixin, self).retrieve(request, *args, **kwargs)
-
-        # return object with sideloading serializer
-        queryset, relations_sources = self.get_sideloadable_object_as_queryset(
-            relations_to_sideload=relations_to_sideload
-        )
-        sideloadable_page = self.get_sideloadable_page_from_queryset(
-            queryset=queryset, relations_to_sideload=relations_to_sideload, relations_sources=relations_sources
-        )
-        serializer = self.get_sideloading_serializer_class()(
-            instance=sideloadable_page,
-            relations_to_sideload=relations_to_sideload,
-            context={"request": request},
-        )
-        return Response(serializer.data)
-
-    def parse_query_param(self, sideload_parameter):
+    def parse_query_param(self, sideload_parameter, sideloadable_fields):
         """
         Parse query param and take validated names
 
@@ -231,7 +75,7 @@ class SideloadableRelationsMixin(object):
         response changed to dict as the sources for multi source fields must be selectable.
 
         """
-        sideloadable_relations = set(self.get_sideloadable_fields().keys())
+        sideloadable_relations = set(sideloadable_fields.keys())
 
         relations_to_sideload = {}
         for param in re.split(",\s*(?![^\[\]]*\])", sideload_parameter):
@@ -245,7 +89,186 @@ class SideloadableRelationsMixin(object):
                     relations_to_sideload[param] = None
         return relations_to_sideload
 
-    def get_sideloadable_page_from_queryset(self, queryset, relations_to_sideload, relations_sources):
+    def check_sideloading_serializer_class(self, serializer_class):
+        if not serializer_class:
+            raise ValueError(f"'{self.__class__.__name__}' sideloading_serializer_class not found")
+        if not issubclass(serializer_class, SideLoadableSerializer):
+            raise ValueError(
+                f"'{self.__class__.__name__}' sideloading_serializer_class must be a SideLoadableSerializer subclass"
+            )
+        serializer_class.check_setup()
+
+    def get_sideloading_serializer(self, *args, **kwargs):
+        """
+        Return the sideloading_serializer instance that should be used for serializing output.
+        """
+        sideloading_serializer_class = self.get_sideloading_serializer_class()
+        kwargs["context"] = self.get_sideloading_serializer_context()
+        return sideloading_serializer_class(*args, **kwargs)
+
+    def get_sideloading_serializer_class(self):
+        """
+        Return the class to use for the sideloading_serializer.
+        Defaults to using `self.sideloading_serializer_class`.
+
+        You may want to override this if you need to provide different
+        serializations depending on the incoming request.
+
+        (Eg. admins get full serialization, others get basic serialization)
+        """
+        assert self.sideloading_serializer_class is not None, (
+            f"'{self.__class__.__name__}' should either include a `sideloading_serializer_class` attribute, "
+            f"or override the `get_sideloading_serializer_class()` method."
+        )
+
+        return self.sideloading_serializer_class
+
+    def get_sideloading_serializer_context(self):
+        """
+        Extra context provided to the serializer class.
+        """
+        return {"request": self.request, "format": self.format_kwarg, "view": self}
+
+    # modified DRF methods
+
+    def initialize_request(self, request, *args, **kwargs):
+        """
+        Disable BrowsableAPIForms during sideloading
+        """
+        request = super(SideloadableRelationsMixin, self).initialize_request(request=request, *args, **kwargs)
+
+        if self.sideloading_query_param_name in request.query_params:
+            if isinstance(self.renderer_classes, (list, tuple)):
+                self.renderer_classes = [
+                    BrowsableAPIRendererWithoutForms if r == BrowsableAPIRenderer else r for r in self.renderer_classes
+                ]
+
+        return request
+
+    def create(self, request, *args, **kwargs):
+        if self.sideloading_query_param_name not in request.query_params:
+            return super().create(request, *args, **kwargs)
+
+        # TODO: correct implementation of creating with sideloading
+        #  create as regular but with sideloaded the response?
+        #  Currently we just pass the post request without sideloading
+        # raise NotImplementedError("Sideloading for method 'create' has not been implemented")
+        return super().create(request, *args, **kwargs)
+
+    def retrieve(self, request, *args, **kwargs):
+        if self.sideloading_query_param_name not in request.query_params:
+            return super().retrieve(request, *args, **kwargs)
+
+        (
+            sideloading_serializer_class,
+            primary_field_name,
+            sideloadable_fields,
+            prefetches,
+            relations_to_sideload,
+            prefetch_relations,
+            relations_sources,
+        ) = self.get_sideloading_variables_from_serializer(request=request)
+
+        if not relations_to_sideload:
+            return super().retrieve(request, *args, **kwargs)
+
+        # return object with sideloading serializer
+        queryset, relations_sources = self.get_sideloadable_object_as_queryset(
+            relations_to_sideload=relations_to_sideload,
+            sideloadable_fields=sideloadable_fields,
+            cleaned_prefetches=prefetches,
+        )
+        sideloadable_page = self.get_sideloadable_page_from_queryset(
+            queryset=queryset,
+            primary_field_name=primary_field_name,
+            sideloadable_fields=sideloadable_fields,
+            relations_to_sideload=relations_to_sideload,
+            relations_sources=relations_sources,
+        )
+        serializer = self.get_sideloading_serializer(
+            instance=sideloadable_page,
+            relations_to_sideload=relations_to_sideload,
+            context={"request": request},
+        )
+        return Response(serializer.data)
+
+    def update(self, request, *args, **kwargs):
+        if self.sideloading_query_param_name not in request.query_params:
+            return super().update(request, *args, **kwargs)
+        raise NotImplementedError("Sideloading for method 'update' has not been implemented")
+
+    def partial_update(self, request, *args, **kwargs):
+        if self.sideloading_query_param_name not in request.query_params:
+            return super().partial_update(request, *args, **kwargs)
+        raise NotImplementedError("Sideloading for method 'partial_update' has not been implemented")
+
+    def destroy(self, request, *args, **kwargs):
+        if self.sideloading_query_param_name not in request.query_params:
+            return super().destroy(request, *args, **kwargs)
+        raise NotImplementedError("Sideloading for method 'destroy' has not been implemented")
+
+    def list(self, request, *args, **kwargs):
+        if request.method != "GET" or self.sideloading_query_param_name not in request.query_params:
+            return super().list(request, *args, **kwargs)
+
+        (
+            sideloading_serializer_class,
+            primary_field_name,
+            sideloadable_fields,
+            prefetches,
+            relations_to_sideload,
+            prefetch_relations,
+            relations_sources,
+        ) = self.get_sideloading_variables_from_serializer(request=request)
+
+        if not relations_to_sideload:
+            return super().list(request, *args, **kwargs)
+
+        # After this `relations_to_sideload` is safe to use
+        queryset = self.get_queryset()
+        if prefetch_relations:
+            queryset = queryset.prefetch_related(*prefetch_relations.values())
+        queryset = self.filter_queryset(queryset)
+
+        # Create page
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            sideloadable_page = self.get_sideloadable_page(
+                page=page,
+                primary_field_name=primary_field_name,
+                sideloadable_fields=sideloadable_fields,
+                relations_to_sideload=relations_to_sideload,
+                relations_sources=relations_sources,
+            )
+            serializer = self.get_sideloading_serializer(
+                instance=sideloadable_page,
+                relations_to_sideload=relations_to_sideload,
+                context={"request": request},
+            )
+            return self.get_paginated_response(serializer.data)
+        else:
+            sideloadable_page = self.get_sideloadable_page_from_queryset(
+                queryset=queryset,
+                primary_field_name=primary_field_name,
+                sideloadable_fields=sideloadable_fields,
+                relations_to_sideload=relations_to_sideload,
+                relations_sources=relations_sources,
+            )
+            serializer = self.get_sideloading_serializer(
+                instance=sideloadable_page,
+                relations_to_sideload=relations_to_sideload,
+                context={"request": request},
+            )
+            return Response(serializer.data)
+
+    def get_sideloadable_page_from_queryset(
+        self,
+        queryset,
+        primary_field_name: str,
+        sideloadable_fields: Dict,
+        relations_to_sideload: Dict,
+        relations_sources: Dict,
+    ):
         """
         Populates page with sideloaded data by collecting ids form sideloaded values and then making into a query
         """
@@ -253,10 +276,10 @@ class SideloadableRelationsMixin(object):
         if not relations_to_sideload:
             raise ValueError("relations_to_sideload is required")
         # this works wonders, but can't be used when page is paginated...
-        sideloadable_page = {self.get_primary_field_name(): queryset}
+        sideloadable_page = {primary_field_name: queryset}
 
         for relation, source_keys in relations_to_sideload.items():
-            field = self.get_sideloadable_fields()[relation]
+            field = sideloadable_fields[relation]
             field_source = field.child.source
             source_model = field.child.Meta.model
             relation_key = field_source or relation
@@ -274,15 +297,22 @@ class SideloadableRelationsMixin(object):
 
         return sideloadable_page
 
-    def get_sideloadable_page(self, page, relations_to_sideload: Dict, relations_sources: Dict):
+    def get_sideloadable_page(
+        self,
+        page,
+        primary_field_name: str,
+        sideloadable_fields: Dict,
+        relations_to_sideload: Dict,
+        relations_sources: Dict,
+    ):
         """
         Populates page with sideloaded data by collecting distinct values form sideloaded data
         """
-        sideloadable_page = {self.get_primary_field_name(): page}
+        sideloadable_page = {primary_field_name: page}
         for relation, source_keys in relations_to_sideload.items():
 
             # fixme:  field.source can't be used in case prefetces with "to_attr" other than source is used
-            field = self.get_sideloadable_fields()[relation]
+            field = sideloadable_fields[relation]
             field_source = field.child.source
             relation_key = field_source or relation
 
@@ -309,7 +339,7 @@ class SideloadableRelationsMixin(object):
 
         return sideloadable_page
 
-    def get_sideloadable_object_as_queryset(self, relations_to_sideload):
+    def get_sideloadable_object_as_queryset(self, relations_to_sideload, sideloadable_fields, cleaned_prefetches):
         """
         mimics DRF original method get_object()
         Returns the object the view is displaying with sideloaded models prefetched.
@@ -321,9 +351,9 @@ class SideloadableRelationsMixin(object):
         # Add prefetches if applicable
         queryset = self.get_queryset()
         prefetch_relations, relations_sources = self._get_relevant_prefetches(
-            sideloadable_fields=self.get_sideloadable_fields(),
+            sideloadable_fields=sideloadable_fields,
             relations_to_sideload=relations_to_sideload,
-            cleaned_prefetches=self.get_prefetches(),
+            cleaned_prefetches=cleaned_prefetches,
         )
 
         if prefetch_relations:
