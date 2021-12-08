@@ -1,4 +1,4 @@
-from rest_framework import viewsets, filters
+from rest_framework import viewsets, filters, versioning
 
 from drf_sideloading.mixins import SideloadableRelationsMixin
 from tests.mixins import OtherMixin
@@ -10,6 +10,7 @@ from tests.serializers import (
     PartnerSerializer,
     ProductSideloadableSerializer,
     CategorySideloadableSerializer,
+    NewProductSideloadableSerializer,
 )
 
 
@@ -21,6 +22,7 @@ class ProductViewSet(SideloadableRelationsMixin, OtherMixin, viewsets.ModelViewS
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
     sideloading_serializer_class = ProductSideloadableSerializer
+    versioning_class = versioning.AcceptHeaderVersioning
     filter_backends = [
         filters.SearchFilter,
         # django_filters.rest_framework.DjangoFilterBackend,
@@ -31,6 +33,12 @@ class ProductViewSet(SideloadableRelationsMixin, OtherMixin, viewsets.ModelViewS
     def get_serializer_class(self):
         # if no super is called sideloading should still work
         return self.serializer_class
+
+    def get_sideloading_serializer_class(self):
+        # if no super is called sideloading should still work
+        if self.request.version == "2.0.0":
+            return NewProductSideloadableSerializer
+        return self.sideloading_serializer_class
 
 
 class CategoryViewSet(SideloadableRelationsMixin, viewsets.ModelViewSet):

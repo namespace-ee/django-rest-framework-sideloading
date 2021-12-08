@@ -8,7 +8,12 @@ from rest_framework.settings import api_settings
 
 from drf_sideloading.serializers import SideLoadableSerializer
 from tests.models import Category, Supplier, Product, Partner
-from tests.serializers import ProductSerializer, CategorySerializer, SupplierSerializer, PartnerSerializer
+from tests.serializers import (
+    ProductSerializer,
+    CategorySerializer,
+    SupplierSerializer,
+    PartnerSerializer,
+)
 from tests.viewsets import ProductViewSet
 
 
@@ -58,7 +63,7 @@ class ProductSideloadTestCase(BaseTestCase):
     def setUpClass(cls):
         super(ProductSideloadTestCase, cls).setUpClass()
 
-        class ProductSideloadableSerializer(SideLoadableSerializer):
+        class TempProductSideloadableSerializer(SideLoadableSerializer):
             products = ProductSerializer(many=True)
             categories = CategorySerializer(source="category", many=True)
             suppliers = SupplierSerializer(source="supplier", many=True)
@@ -72,7 +77,7 @@ class ProductSideloadTestCase(BaseTestCase):
                     "partners": "partners",
                 }
 
-        ProductViewSet.sideloading_serializer_class = ProductSideloadableSerializer
+        ProductViewSet.sideloading_serializer_class = TempProductSideloadableSerializer
 
     def test_list(self):
         response = self.client.get(path=reverse("product-list"), **self.DEFAULT_HEADERS)
@@ -184,7 +189,7 @@ class ProductMultiSourceSideloadTestCase(BaseTestCase):
     def setUpClass(cls):
         super(ProductMultiSourceSideloadTestCase, cls).setUpClass()
 
-        class ProductSideloadableSerializer(SideLoadableSerializer):
+        class TempProductSideloadableSerializer(SideLoadableSerializer):
             products = ProductSerializer(many=True)
             categories = CategorySerializer(source="category", many=True)
             main_suppliers = SupplierSerializer(source="supplier", many=True)
@@ -206,7 +211,7 @@ class ProductMultiSourceSideloadTestCase(BaseTestCase):
                     },
                 }
 
-        ProductViewSet.sideloading_serializer_class = ProductSideloadableSerializer
+        ProductViewSet.sideloading_serializer_class = TempProductSideloadableSerializer
 
     def setUp(self):
         super().setUp()
@@ -343,13 +348,13 @@ class TestDrfSideloadingNoMetaClassDefined(BaseTestCase):
     def setUpClass(cls):
         super(TestDrfSideloadingNoMetaClassDefined, cls).setUpClass()
 
-        class ProductSideloadableSerializer(SideLoadableSerializer):
+        class TempProductSideloadableSerializer(SideLoadableSerializer):
             products = ProductSerializer(many=True)
             categories = CategorySerializer(many=True)
             suppliers = SupplierSerializer(many=True)
             partners = PartnerSerializer(many=True)
 
-        ProductViewSet.sideloading_serializer_class = ProductSideloadableSerializer
+        ProductViewSet.sideloading_serializer_class = TempProductSideloadableSerializer
 
     def test_correct_exception_raised(self):
         expected_error_message = "Sideloadable serializer must have a Meta class defined with the 'primary' field name!"
@@ -368,7 +373,7 @@ class TestDrfSideloadingNoPrimaryDefined(BaseTestCase):
     def setUpClass(cls):
         super(TestDrfSideloadingNoPrimaryDefined, cls).setUpClass()
 
-        class ProductSideloadableSerializer(SideLoadableSerializer):
+        class TempProductSideloadableSerializer(SideLoadableSerializer):
             products = ProductSerializer(many=True)
             categories = CategorySerializer(many=True)
             suppliers = SupplierSerializer(many=True)
@@ -377,7 +382,7 @@ class TestDrfSideloadingNoPrimaryDefined(BaseTestCase):
             class Meta:
                 pass
 
-        ProductViewSet.sideloading_serializer_class = ProductSideloadableSerializer
+        ProductViewSet.sideloading_serializer_class = TempProductSideloadableSerializer
 
     def test_correct_exception_raised(self):
         expected_error_message = "Sideloadable serializer must have a Meta class defined with the 'primary' field name!"
@@ -396,7 +401,7 @@ class TestDrfSideloadingRelationsNotListSerializers(BaseTestCase):
     def setUpClass(cls):
         super(TestDrfSideloadingRelationsNotListSerializers, cls).setUpClass()
 
-        class ProductSideloadableSerializer(SideLoadableSerializer):
+        class TempProductSideloadableSerializer(SideLoadableSerializer):
             products = ProductSerializer(many=True)
             categories = CategorySerializer()
             suppliers = SupplierSerializer()
@@ -405,7 +410,7 @@ class TestDrfSideloadingRelationsNotListSerializers(BaseTestCase):
             class Meta:
                 primary = "products"
 
-        ProductViewSet.sideloading_serializer_class = ProductSideloadableSerializer
+        ProductViewSet.sideloading_serializer_class = TempProductSideloadableSerializer
 
     def test_correct_exception_raised(self):
         expected_error_message = "SideLoadable field 'categories' must be set as many=True"
@@ -422,7 +427,7 @@ class TestDrfSideloadingInvalidPrimary(BaseTestCase):
     def setUpClass(cls):
         super(TestDrfSideloadingInvalidPrimary, cls).setUpClass()
 
-        class ProductSideloadableSerializer(SideLoadableSerializer):
+        class TempProductSideloadableSerializer(SideLoadableSerializer):
             products = ProductSerializer(many=True)
             categories = CategorySerializer(many=True)
             suppliers = SupplierSerializer(many=True)
@@ -431,7 +436,7 @@ class TestDrfSideloadingInvalidPrimary(BaseTestCase):
             class Meta:
                 primary = "other"
 
-        ProductViewSet.sideloading_serializer_class = ProductSideloadableSerializer
+        ProductViewSet.sideloading_serializer_class = TempProductSideloadableSerializer
 
     def test_correct_exception_raised(self):
         expected_error_message = "Sideloadable serializer Meta.primary must point to a field in the serializer!"
@@ -450,7 +455,7 @@ class TestDrfSideloadingInvalidPrefetchesType(BaseTestCase):
     def setUpClass(cls):
         super(TestDrfSideloadingInvalidPrefetchesType, cls).setUpClass()
 
-        class ProductSideloadableSerializer(SideLoadableSerializer):
+        class TempProductSideloadableSerializer(SideLoadableSerializer):
             products = ProductSerializer(many=True)
             categories = CategorySerializer(many=True)
             suppliers = SupplierSerializer(many=True)
@@ -464,7 +469,7 @@ class TestDrfSideloadingInvalidPrefetchesType(BaseTestCase):
                     ("partners", "partners"),
                 )
 
-        ProductViewSet.sideloading_serializer_class = ProductSideloadableSerializer
+        ProductViewSet.sideloading_serializer_class = TempProductSideloadableSerializer
 
     def test_correct_exception_raised(self):
         expected_error_message = "Sideloadable serializer Meta attribute 'prefetches' must be a dict."
@@ -483,7 +488,7 @@ class TestDrfSideloadingInvalidPrefetchesValuesType(BaseTestCase):
     def setUpClass(cls):
         super(TestDrfSideloadingInvalidPrefetchesValuesType, cls).setUpClass()
 
-        class ProductSideloadableSerializer(SideLoadableSerializer):
+        class TempProductSideloadableSerializer(SideLoadableSerializer):
             products = ProductSerializer(many=True)
             categories = CategorySerializer(many=True)
             suppliers = SupplierSerializer(many=True)
@@ -497,7 +502,7 @@ class TestDrfSideloadingInvalidPrefetchesValuesType(BaseTestCase):
                     "partners": 123,
                 }
 
-        ProductViewSet.sideloading_serializer_class = ProductSideloadableSerializer
+        ProductViewSet.sideloading_serializer_class = TempProductSideloadableSerializer
 
     def test_correct_exception_raised(self):
         expected_error_message = "prefetch with type '<class 'int'>' is not implemented"
@@ -519,7 +524,7 @@ class TestDrfSideloadingValidPrefetches(BaseTestCase):
     def setUpClass(cls):
         super(TestDrfSideloadingValidPrefetches, cls).setUpClass()
 
-        class ProductSideloadableSerializer(SideLoadableSerializer):
+        class TempProductSideloadableSerializer(SideLoadableSerializer):
             products = ProductSerializer(many=True)
             categories = CategorySerializer(source="category", many=True)
             suppliers = SupplierSerializer(source="supplier", many=True)
@@ -534,6 +539,7 @@ class TestDrfSideloadingValidPrefetches(BaseTestCase):
                 prefetches = {
                     "categories": "category",
                     "suppliers": ["supplier"],
+                    "partners": ["partners"],
                     "filtered_suppliers": Prefetch(
                         lookup="supplier",
                         queryset=Supplier.objects.filter(name__in=["Supplier2", "Supplier4"]),
@@ -568,7 +574,7 @@ class TestDrfSideloadingValidPrefetches(BaseTestCase):
                     },
                 }
 
-        ProductViewSet.sideloading_serializer_class = ProductSideloadableSerializer
+        ProductViewSet.sideloading_serializer_class = TempProductSideloadableSerializer
 
     def test_sideloading_with_dual_usage_prefetches(self):
         response_2 = self.client.get(
@@ -611,7 +617,6 @@ class TestDrfSideloadingValidPrefetches(BaseTestCase):
     #
     #     filtered_partner_names = {partner["name"] for partner in response_1.json()["filtered_partners"]}
     #     self.assertSetEqual({"Partner2", "Partner4"}, filtered_partner_names)
-    #
     #
     # # fixme: for some reason, the filtered_suppliers is not sideloaded altho Prefetch present in queryset arguments
     # def test_sideloading_with_filtered_prefetch(self):
@@ -688,7 +693,7 @@ class TestDrfSideloadingInvalidPrefetchSource(BaseTestCase):
     def setUpClass(cls):
         super(TestDrfSideloadingInvalidPrefetchSource, cls).setUpClass()
 
-        class ProductSideloadableSerializer(SideLoadableSerializer):
+        class TempProductSideloadableSerializer(SideLoadableSerializer):
             products = ProductSerializer(many=True)
             categories = CategorySerializer(source="category", many=True)
             suppliers = SupplierSerializer(source="supplier", many=True)
@@ -737,7 +742,7 @@ class TestDrfSideloadingInvalidPrefetchSource(BaseTestCase):
                     },
                 }
 
-        ProductViewSet.sideloading_serializer_class = ProductSideloadableSerializer
+        ProductViewSet.sideloading_serializer_class = TempProductSideloadableSerializer
 
     def test_sideloading_combined_suppliers_with_mismatching_to_attr_and_source(self):
         msg = (
@@ -762,7 +767,7 @@ class TestDrfSideloadingValidPrefetchObjectsImplicit(BaseTestCase):
     def setUpClass(cls):
         super(TestDrfSideloadingValidPrefetchObjectsImplicit, cls).setUpClass()
 
-        class ProductSideloadableSerializer(SideLoadableSerializer):
+        class TempProductSideloadableSerializer(SideLoadableSerializer):
             products = ProductSerializer(many=True)
             categories = CategorySerializer(source="category", many=True)
             suppliers = SupplierSerializer(source="supplier", many=True)
@@ -782,7 +787,7 @@ class TestDrfSideloadingValidPrefetchObjectsImplicit(BaseTestCase):
                     ),
                 }
 
-        ProductViewSet.sideloading_serializer_class = ProductSideloadableSerializer
+        ProductViewSet.sideloading_serializer_class = TempProductSideloadableSerializer
 
     # TODO: fix test as we get an error: "Two different prefetches for the same attribute"
     # def test_sideloading_with_prefetch_object_without_to_attr(self):
@@ -804,7 +809,7 @@ class TestDrfSideloadingPrefetchObjectsMatchingLookup(BaseTestCase):
     def setUpClass(cls):
         super(TestDrfSideloadingPrefetchObjectsMatchingLookup, cls).setUpClass()
 
-        class ProductSideloadableSerializer(SideLoadableSerializer):
+        class TempProductSideloadableSerializer(SideLoadableSerializer):
             products = ProductSerializer(many=True)
             categories = CategorySerializer(source="category", many=True)
             suppliers = SupplierSerializer(source="supplier", many=True)
@@ -822,7 +827,7 @@ class TestDrfSideloadingPrefetchObjectsMatchingLookup(BaseTestCase):
                     ),
                 }
 
-        ProductViewSet.sideloading_serializer_class = ProductSideloadableSerializer
+        ProductViewSet.sideloading_serializer_class = TempProductSideloadableSerializer
 
     def test_sideloading_with_prefetch_object_without_to_attr_but_lookup_matching_field(self):
         response_1 = self.client.get(
@@ -852,7 +857,7 @@ class TestDrfSideloadingInvalidPrefetchObject(BaseTestCase):
     def setUpClass(cls):
         super(TestDrfSideloadingInvalidPrefetchObject, cls).setUpClass()
 
-        class ProductSideloadableSerializer(SideLoadableSerializer):
+        class TempProductSideloadableSerializer(SideLoadableSerializer):
             products = ProductSerializer(many=True)
             categories = CategorySerializer(source="category", many=True)
             suppliers = SupplierSerializer(source="supplier", many=True)
@@ -878,7 +883,7 @@ class TestDrfSideloadingInvalidPrefetchObject(BaseTestCase):
                     ),
                 }
 
-        ProductViewSet.sideloading_serializer_class = ProductSideloadableSerializer
+        ProductViewSet.sideloading_serializer_class = TempProductSideloadableSerializer
 
     # # TODO: fix this for cases where field source is present but Prefetch.to_attr mismatches
     # def test_sideloading_with_prefetches(self):
@@ -908,7 +913,7 @@ class TestDrfSideloadingBrowsableApiPermissions(BaseTestCase):
             def has_object_permission(self, request, view, obj):
                 raise ValueError("This must not be called, when sideloadading is used!")
 
-        class ProductSideloadableSerializer(SideLoadableSerializer):
+        class TempProductSideloadableSerializer(SideLoadableSerializer):
             products = ProductSerializer(many=True)
             categories = CategorySerializer(source="category", many=True)
             suppliers = SupplierSerializer(source="supplier", many=True)
@@ -924,7 +929,7 @@ class TestDrfSideloadingBrowsableApiPermissions(BaseTestCase):
 
         ProductViewSet.renderer_classes = (BrowsableAPIRenderer, JSONRenderer)
         ProductViewSet.permission_classes = (ProductPermission,)
-        ProductViewSet.sideloading_serializer_class = ProductSideloadableSerializer
+        ProductViewSet.sideloading_serializer_class = TempProductSideloadableSerializer
 
     @classmethod
     def tearDownClass(cls):
@@ -992,7 +997,7 @@ class ProductSideloadSameSourceDuplicationTestCase(BaseTestCase):
                 model = Category
                 fields = ["old_name"]
 
-        class ProductSideloadableSerializer(SideLoadableSerializer):
+        class TempProductSideloadableSerializer(SideLoadableSerializer):
             products = ProductSerializer(many=True)
             categories = CategorySerializer(source="category", many=True)
             old_categories = OldCategorySerializer(source="category", many=True)
@@ -1003,7 +1008,7 @@ class ProductSideloadSameSourceDuplicationTestCase(BaseTestCase):
                 primary = "products"
                 prefetches = {"category": "category", "old_categories": "category"}
 
-        ProductViewSet.sideloading_serializer_class = ProductSideloadableSerializer
+        ProductViewSet.sideloading_serializer_class = TempProductSideloadableSerializer
 
     def test_list_sideload_categories(self):
         response = self.client.get(
@@ -1031,3 +1036,38 @@ class ProductSideloadSameSourceDuplicationTestCase(BaseTestCase):
         self.assertIsInstance(response.json(), dict)
         self.assertListEqual(["products", "category"], list(response.data.serializer.instance.keys()))
         self.assertListEqual(["products", "categories", "old_categories"], list(response.json().keys()))
+
+
+class VersionesSideloadableSerializerTestCase(BaseTestCase):
+    def test_list_sideload_categories(self):
+        # old as example
+        response = self.client.get(
+            path=reverse("product-list"),
+            data={"sideload": "categories"},
+            # headers:
+            HTTP_ACCEPT="application/json; version=1.0",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsInstance(response.json(), dict)
+        self.assertListEqual(["products", "categories"], list(response.json().keys()))
+
+        # new version can't sideload this value
+        response = self.client.get(
+            path=reverse("product-list"),
+            data={"sideload": "categories"},
+            # headers:
+            HTTP_ACCEPT="application/json; version=2.0.0",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsInstance(response.json(), list)
+
+        # new version called correctly
+        response = self.client.get(
+            path=reverse("product-list"),
+            data={"sideload": "new_categories"},
+            # headers:
+            HTTP_ACCEPT="application/json; version=2.0.0",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsInstance(response.json(), dict)
+        self.assertListEqual(["products", "new_categories"], list(response.json().keys()))

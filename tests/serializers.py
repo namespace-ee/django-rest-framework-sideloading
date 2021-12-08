@@ -64,3 +64,26 @@ class ProductSideloadableSerializer(SideLoadableSerializer):
                 "backup_supplier": ["backup_supplier"],
             },
         }
+
+
+class NewProductSideloadableSerializer(SideLoadableSerializer):
+    products = ProductSerializer(many=True)
+    new_categories = CategorySerializer(source="category", many=True)
+    new_main_suppliers = SupplierSerializer(source="supplier", many=True)
+    new_backup_suppliers = SupplierSerializer(source="backup_supplier", many=True)
+    new_partners = PartnerSerializer(source="partner", many=True)
+    combined_suppliers = SupplierSerializer(many=True)
+
+    class Meta:
+        primary = "products"
+        prefetches = {
+            "new_categories": "category",
+            "new_main_suppliers": "supplier",
+            "new_backup_suppliers": "backup_supplier",
+            "new_partners": "partners",
+            # These can be defined to always load them, else they will be copied over form all sources or selected sources only.
+            "combined_suppliers": {
+                "suppliers": ["supplier"],
+                "backup_supplier": ["backup_supplier"],
+            },
+        }
