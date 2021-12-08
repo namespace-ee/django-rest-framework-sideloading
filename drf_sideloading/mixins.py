@@ -1,15 +1,14 @@
 import copy
-import itertools
 import re
 from itertools import chain
-from typing import List, Dict, Optional, Union, Tuple, Set
+from typing import Dict, Optional, Union, Tuple, Set
 
 from django.db.models import Prefetch
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404
 from rest_framework.renderers import BrowsableAPIRenderer
 from rest_framework.response import Response
-from rest_framework.serializers import ListSerializer, ModelSerializer
+from rest_framework.serializers import ListSerializer
 
 from drf_sideloading.renderers import BrowsableAPIRendererWithoutForms
 from drf_sideloading.serializers import SideLoadableSerializer
@@ -310,8 +309,6 @@ class SideloadableRelationsMixin(object):
         """
         sideloadable_page = {primary_field_name: page}
         for relation, source_keys in relations_to_sideload.items():
-
-            # fixme:  field.source can't be used in case prefetces with "to_attr" other than source is used
             field = sideloadable_fields[relation]
             field_source = field.child.source
             relation_key = field_source or relation
@@ -322,12 +319,8 @@ class SideloadableRelationsMixin(object):
             if relation not in sideloadable_page:
                 sideloadable_page[relation_key] = set()
 
-            # TODO: case when no or all keys are present, use the __all__ prefetch if present,
-            #  else loop through all the relations.
-            # TODO: the correct field might be relation even if source is present
-            #  Check this usage.
-
             if isinstance(relations_sources.get(relation), dict):
+                # Multi source relation
                 for src_key, src in relations_sources[relation].items():
                     if not (source_keys is None or src_key in source_keys or src_key == "__all__"):
                         raise ValueError(f"Unexpected relation source '{src_key}' used")
@@ -385,8 +378,6 @@ class SideloadableRelationsMixin(object):
             getattr(r, current_lookup) for r in related_objects if getattr(r, current_lookup, None) is not None
         ]
 
-        # TODO: make sure this follows the new logic (fetching from source or prefetch to_attr)
-
         if lookup_values:
             if lookup_values[0].__class__.__name__ in ["ManyRelatedManager", "RelatedManager"]:
                 related_objects_set = set(chain(*[related_queryset.all() for related_queryset in lookup_values]))
@@ -420,8 +411,6 @@ class SideloadableRelationsMixin(object):
                     f"Sideloadable field '{relation}' Prefetch 'to_attr' can't be used with source defined. "
                     f"Remove source from field serializer."
                 )
-            # if "queryset" not in prefetches:
-            #     raise ValueError(f"Sideloadable field '{relation}' Prefetch 'queryset' must be set!")
             if value.get("queryset") or value.get("to_attr"):
                 if not value.get("to_attr"):
                     value["to_attr"] = relation
@@ -429,18 +418,12 @@ class SideloadableRelationsMixin(object):
             else:
                 cleaned_value = value["lookup"]
         elif isinstance(value, Prefetch):
-            # check that to_attr is set the same as the field!
-            # TODO: new method of fetching the values should not require this
+            # check that Prefetch.to_attr is set the same as the field.source!
             if value.to_attr and field.child.source and field.child.source != value.to_attr:
                 raise ValueError(
                     f"Sideloadable field '{relation}' Prefetch 'to_attr' can't be different from source defined. "
                     f"Tip: Remove source from field serializer."
                 )
-            # if not value.to_attr:
-            #     if value.prefetch_to != relation:
-            #         raise ValueError(f"Sideloadable field '{relation}' Prefetch 'to_attr' must be set!")
-            # elif value.to_attr != relation:
-            #     raise ValueError(f"Sideloadable field '{relation}' Prefetch 'to_attr' must match the field name!")
             cleaned_value = value
         else:
             raise ValueError("Sideloadable prefetch values must be a list of strings or Prefetch objects")
@@ -496,9 +479,6 @@ class SideloadableRelationsMixin(object):
             else:
                 raise NotImplementedError(f"prefetch with type '{type(user_prefetches)}' is not implemented")
 
-        # TODO: check for Prefetch objects with the save 'to_attr'
-        #  maybe it better to check this wihte requesting because it won't be an issue until they clash.
-
         return cleaned_prefetches
 
     def _add_prefetch(self, prefetches: Dict, prefetch: Union[str, Prefetch]) -> str:
@@ -553,12 +533,6 @@ class SideloadableRelationsMixin(object):
 
             # gather prefetches and sources
             if relation_prefetches is None:
-                # TODO: check primary serializer model for direct source?
-                #  else allow to fail with invalid prefetch
-                # prefetch_attr = self._add_prefetch(
-                #     prefetches=gathered_prefetches, prefetch=sideloadable_fields[relation].child.source or relation
-                # )
-                # relations_sources[relation] = [prefetch_attr]
                 raise ValueError(
                     f"Missing prefetch for field '{relation}'. Check '_gather_all_prefetches' works correctly"
                 )
@@ -631,8 +605,8 @@ class SideloadableRelationsMixin(object):
                             f"source '{invalid_source_key}' has not been implemented for sideloadable field '{relation}'"
                         )
                 elif "__all__" in relation_prefetches:
-                    # TODO: find source in case it's not a Prefetch object.
-                    requested_sources = [relation_prefetches["__all__"].to_attr]
+                    # find source in case it's not a Prefetch object.
+                    # requested_sources = [relation_prefetches["__all__"].to_attr]
                     raise NotImplementedError("default prefetch for all in not implemented")
                 elif relation_prefetches:
                     requested_sources = list(relation_prefetches.keys())

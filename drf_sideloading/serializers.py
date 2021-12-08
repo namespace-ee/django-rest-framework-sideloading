@@ -13,11 +13,6 @@ class SideLoadableSerializer(serializers.Serializer):
         self.fields_to_load = [self.Meta.primary] + list(relations_to_sideload.keys())
         super(SideLoadableSerializer, self).__init__(instance=instance, data=data, **kwargs)
 
-    # def __new__(cls, name, bases, attrs):
-    #     instance = super().__new__(cls, name, bases, attrs)
-    #     instance.check_setup()
-    #     return instance
-
     @classmethod
     def many_init(cls, *args, **kwargs):
         raise NotImplementedError("Sideloadable serializer with many=True has not been implemented")
