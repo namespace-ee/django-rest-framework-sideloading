@@ -192,21 +192,6 @@ class SideloadableRelationsMixin(object):
         )
         return Response(serializer.data)
 
-    def update(self, request, *args, **kwargs):
-        if self.sideloading_query_param_name not in request.query_params:
-            return super().update(request, *args, **kwargs)
-        raise NotImplementedError("Sideloading for method 'update' has not been implemented")
-
-    def partial_update(self, request, *args, **kwargs):
-        if self.sideloading_query_param_name not in request.query_params:
-            return super().partial_update(request, *args, **kwargs)
-        raise NotImplementedError("Sideloading for method 'partial_update' has not been implemented")
-
-    def destroy(self, request, *args, **kwargs):
-        if self.sideloading_query_param_name not in request.query_params:
-            return super().destroy(request, *args, **kwargs)
-        raise NotImplementedError("Sideloading for method 'destroy' has not been implemented")
-
     def list(self, request, *args, **kwargs):
         if request.method != "GET" or self.sideloading_query_param_name not in request.query_params:
             return super().list(request, *args, **kwargs)
