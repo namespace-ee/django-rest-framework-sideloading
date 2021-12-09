@@ -10,7 +10,6 @@ from rest_framework.renderers import BrowsableAPIRenderer
 from rest_framework.response import Response
 from rest_framework.serializers import ListSerializer
 
-from drf_sideloading.renderers import BrowsableAPIRendererWithoutForms
 from drf_sideloading.serializers import SideLoadableSerializer
 
 
@@ -129,20 +128,6 @@ class SideloadableRelationsMixin(object):
         return {"request": self.request, "format": self.format_kwarg, "view": self}
 
     # modified DRF methods
-
-    def initialize_request(self, request, *args, **kwargs):
-        """
-        Disable BrowsableAPIForms during sideloading
-        """
-        request = super(SideloadableRelationsMixin, self).initialize_request(request=request, *args, **kwargs)
-
-        if self.sideloading_query_param_name in request.query_params:
-            if isinstance(self.renderer_classes, (list, tuple)):
-                self.renderer_classes = [
-                    BrowsableAPIRendererWithoutForms if r == BrowsableAPIRenderer else r for r in self.renderer_classes
-                ]
-
-        return request
 
     def retrieve(self, request, *args, **kwargs):
         if self.sideloading_query_param_name not in request.query_params:
