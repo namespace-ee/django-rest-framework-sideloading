@@ -145,16 +145,6 @@ class SideloadableRelationsMixin(object):
 
         return request
 
-    def create(self, request, *args, **kwargs):
-        if self.sideloading_query_param_name not in request.query_params:
-            return super().create(request, *args, **kwargs)
-
-        # TODO: correct implementation of creating with sideloading
-        #  create as regular but with sideloaded the response?
-        #  Currently we just pass the post request without sideloading
-        # raise NotImplementedError("Sideloading for method 'create' has not been implemented")
-        return super().create(request, *args, **kwargs)
-
     def retrieve(self, request, *args, **kwargs):
         if self.sideloading_query_param_name not in request.query_params:
             return super().retrieve(request, *args, **kwargs)
