@@ -144,16 +144,6 @@ class SideloadableRelationsMixin(object):
 
         return request
 
-    def create(self, request, *args, **kwargs):
-        if self.sideloading_query_param_name not in request.query_params:
-            return super().create(request, *args, **kwargs)
-
-        # TODO: correct implementation of creating with sideloading
-        #  create as regular but with sideloaded the response?
-        #  Currently we just pass the post request without sideloading
-        # raise NotImplementedError("Sideloading for method 'create' has not been implemented")
-        return super().create(request, *args, **kwargs)
-
     def retrieve(self, request, *args, **kwargs):
         if self.sideloading_query_param_name not in request.query_params:
             return super().retrieve(request, *args, **kwargs)
@@ -190,21 +180,6 @@ class SideloadableRelationsMixin(object):
             context={"request": request},
         )
         return Response(serializer.data)
-
-    def update(self, request, *args, **kwargs):
-        if self.sideloading_query_param_name not in request.query_params:
-            return super().update(request, *args, **kwargs)
-        raise NotImplementedError("Sideloading for method 'update' has not been implemented")
-
-    def partial_update(self, request, *args, **kwargs):
-        if self.sideloading_query_param_name not in request.query_params:
-            return super().partial_update(request, *args, **kwargs)
-        raise NotImplementedError("Sideloading for method 'partial_update' has not been implemented")
-
-    def destroy(self, request, *args, **kwargs):
-        if self.sideloading_query_param_name not in request.query_params:
-            return super().destroy(request, *args, **kwargs)
-        raise NotImplementedError("Sideloading for method 'destroy' has not been implemented")
 
     def list(self, request, *args, **kwargs):
         if request.method != "GET" or self.sideloading_query_param_name not in request.query_params:
