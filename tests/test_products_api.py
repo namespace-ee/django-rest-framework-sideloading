@@ -81,7 +81,7 @@ class ProductSideloadTestCase(BaseTestCase):
 
     def test_list(self):
         response = self.client.get(path=reverse("product-list"), **self.DEFAULT_HEADERS)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.json())
         self.assertIsInstance(response.json(), list)
         self.assertEqual(4, len(response.json()))
         self.assertEqual("Product1", response.json()[0]["name"])
@@ -91,7 +91,7 @@ class ProductSideloadTestCase(BaseTestCase):
         response = self.client.get(
             path=reverse("product-list"), data={"sideload": "categories,suppliers,partners"}, **self.DEFAULT_HEADERS
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.json())
         self.assertIsInstance(response.json(), dict)
         self.assertListEqual(["products", "categories", "suppliers", "partners"], list(response.json().keys()))
 
@@ -100,13 +100,13 @@ class ProductSideloadTestCase(BaseTestCase):
         response = self.client.get(
             path=reverse("product-list"), data={"sideload": "suppliers,partners"}, **self.DEFAULT_HEADERS
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.json())
         self.assertIsInstance(response.json(), dict)
         self.assertListEqual(["products", "suppliers", "partners"], list(response.json().keys()))
 
     def test_detail(self):
         response = self.client.get(path=reverse("product-detail", args=[self.product1.id]), **self.DEFAULT_HEADERS)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.json())
         self.assertIsInstance(response.json(), dict)
         self.assertListEqual(["name", "category", "supplier", "partners"], list(response.json().keys()))
         # TODO: check details
@@ -118,7 +118,7 @@ class ProductSideloadTestCase(BaseTestCase):
             data={"sideload": "categories,suppliers,partners"},
             **self.DEFAULT_HEADERS,
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.json())
         self.assertIsInstance(response.json(), dict)
         self.assertListEqual(["products", "categories", "suppliers", "partners"], list(response.json().keys()))
         self.assertEqual(1, len(response.json().get("products")))
@@ -131,7 +131,7 @@ class ProductSideloadTestCase(BaseTestCase):
             data={"sideload": "suppliers,partners"},
             **self.DEFAULT_HEADERS,
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.json())
         self.assertIsInstance(response.json(), dict)
         self.assertListEqual(["products", "suppliers", "partners"], list(response.json().keys()))
         self.assertEqual(1, len(response.json().get("products")))
@@ -140,7 +140,7 @@ class ProductSideloadTestCase(BaseTestCase):
     # all negative test cases below only here
     def test_sideload_param_empty_string(self):
         response = self.client.get(path=reverse("product-list"), data={"sideload": ""}, **self.DEFAULT_HEADERS)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.json())
         self.assertIsInstance(response.json(), list)
         self.assertEqual(4, len(response.json()))
         self.assertEqual("Product1", response.json()[0]["name"])
@@ -149,18 +149,15 @@ class ProductSideloadTestCase(BaseTestCase):
         response = self.client.get(
             path=reverse("product-list"), data={"sideload": "nonexistent"}, **self.DEFAULT_HEADERS
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIsInstance(response.json(), list)
-        self.assertEqual(4, len(response.json()))
-        self.assertEqual("Product1", response.json()[0]["name"])
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertDictEqual({"sideload": ["'nonexistent' is not one of the available choices."]}, response.json())
 
     def test_sideload_param_nonexistent_mixed_existing_relation(self):
         response = self.client.get(
             path=reverse("product-list"), data={"sideload": "nonexistent,suppliers"}, **self.DEFAULT_HEADERS
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIsInstance(response.json(), dict)
-        self.assertListEqual(["products", "suppliers"], list(response.json().keys()))
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertDictEqual({"sideload": ["'nonexistent' is not one of the available choices."]}, response.json())
 
     def test_sideloading_param_wrongly_formed_query(self):
         response = self.client.get(
@@ -168,18 +165,8 @@ class ProductSideloadTestCase(BaseTestCase):
             data={"sideload": ",,@,123,categories,123,.unexisting,123,,,,suppliers,!@"},
             **self.DEFAULT_HEADERS,
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIsInstance(response.json(), dict)
-        self.assertListEqual(["products", "categories", "suppliers"], list(response.json().keys()))
-
-    def test_sideloading_partner_product_use_primary_list(self):
-        """use primary model as a sideload relation request should not fail"""
-        response = self.client.get(
-            path=reverse("product-list"), data={"sideload": "partners,products"}, **self.DEFAULT_HEADERS
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIsInstance(response.json(), dict)
-        self.assertListEqual(["products", "partners"], list(response.json().keys()))
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertDictEqual({"sideload": ["'@' is not one of the available choices."]}, response.json())
 
 
 class ProductMultiSourceSideloadTestCase(BaseTestCase):
@@ -232,7 +219,7 @@ class ProductMultiSourceSideloadTestCase(BaseTestCase):
             },
             **self.DEFAULT_HEADERS,
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.json())
         self.assertIsInstance(response.json(), dict)
         self.assertListEqual(
             ["products", "categories", "main_suppliers", "backup_suppliers", "partners", "combined_suppliers"],
@@ -259,7 +246,7 @@ class ProductMultiSourceSideloadTestCase(BaseTestCase):
             data={"sideload": "combined_suppliers[backup_suppliers]", "search": self.product1.name},
             **self.DEFAULT_HEADERS,
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.json())
         self.assertIsInstance(response.json(), dict)
         self.assertListEqual(["products", "combined_suppliers"], list(response.json().keys()))
         self.assertEqual(1, len(response.json()["products"]))
@@ -275,7 +262,7 @@ class ProductMultiSourceSideloadTestCase(BaseTestCase):
             data={"sideload": "combined_suppliers", "search": self.product1.name},
             **self.DEFAULT_HEADERS,
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.json())
         self.assertIsInstance(response.json(), dict)
         self.assertListEqual(["products", "combined_suppliers"], list(response.json().keys()))
         self.assertEqual(1, len(response.json()["products"]))
@@ -294,7 +281,7 @@ class ProductMultiSourceSideloadTestCase(BaseTestCase):
             data={"sideload": "combined_suppliers", "search": self.product1.name},
             **self.DEFAULT_HEADERS,
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.json())
         self.assertIsInstance(response.json(), dict)
         self.assertListEqual(["products", "combined_suppliers"], list(response.json().keys()))
         self.assertEqual(1, len(response.json()["products"]))
@@ -313,7 +300,7 @@ class ProductMultiSourceSideloadTestCase(BaseTestCase):
 class CategorySideloadTestCase(BaseTestCase):
     def test_list(self):
         response = self.client.get(path=reverse("category-list"), data={}, **self.DEFAULT_HEADERS)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.json())
         self.assertIsInstance(response.json(), list)
         self.assertEqual(1, len(response.json()))
         self.assertEqual("Category", response.json()[0]["name"])
@@ -323,7 +310,7 @@ class CategorySideloadTestCase(BaseTestCase):
         response = self.client.get(
             path=reverse("category-list"), data={"sideload": "products,suppliers,partners"}, **self.DEFAULT_HEADERS
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.json())
         self.assertIsInstance(response.json(), dict)
         self.assertListEqual(["categories", "products", "suppliers", "partners"], list(response.json().keys()))
 
@@ -333,7 +320,7 @@ class CategorySideloadTestCase(BaseTestCase):
         response = self.client.get(
             path=reverse("category-list"), data={"sideload": "suppliers,partners"}, **self.DEFAULT_HEADERS
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.json())
         self.assertIsInstance(response.json(), dict)
         self.assertListEqual(["categories", "suppliers", "partners"], list(response.json().keys()))
 
@@ -582,7 +569,7 @@ class TestDrfSideloadingValidPrefetches(BaseTestCase):
             data={"sideload": "categories,suppliers,partners"},
             **self.DEFAULT_HEADERS,
         )
-        self.assertEqual(response_2.status_code, status.HTTP_200_OK)
+        self.assertEqual(response_2.status_code, status.HTTP_200_OK, response_2.data)
         self.assertIsInstance(response_2.json(), dict)
         self.assertListEqual(["products", "categories", "suppliers", "partners"], list(response_2.json().keys()))
         # check suppliers and partners are the same as from previous query!
@@ -599,7 +586,7 @@ class TestDrfSideloadingValidPrefetches(BaseTestCase):
     #         data={"sideload": "categories,suppliers,filtered_suppliers,partners,filtered_partners"},
     #         **self.DEFAULT_HEADERS,
     #     )
-    #     self.assertEqual(response_1.status_code, status.HTTP_200_OK)
+    #     self.assertEqual(response_1.status_code, status.HTTP_200_OK, response.json())
     #     self.assertIsInstance(response_1.json(), dict)
     #     self.assertListEqual(
     #         ["products", "categories", "suppliers", "filtered_suppliers", "partners", "filtered_partners"],
@@ -625,7 +612,7 @@ class TestDrfSideloadingValidPrefetches(BaseTestCase):
     #         data={"sideload": "filtered_suppliers,filtered_partners"},
     #         **self.DEFAULT_HEADERS,
     #     )
-    #     self.assertEqual(response_1.status_code, status.HTTP_200_OK)
+    #     self.assertEqual(response_1.status_code, status.HTTP_200_OK, response.json())
     #     self.assertIsInstance(response_1.json(), dict)
     #     self.assertListEqual(
     #         ["products", "filtered_suppliers", "filtered_partners"],
@@ -644,7 +631,7 @@ class TestDrfSideloadingValidPrefetches(BaseTestCase):
     #         data={"sideload": "categories,filtered_suppliers,filtered_suppliers2,filtered_partners"},
     #         **self.DEFAULT_HEADERS,
     #     )
-    #     self.assertEqual(response_1.status_code, status.HTTP_200_OK)
+    #     self.assertEqual(response_1.status_code, status.HTTP_200_OK, response.json())
     #     self.assertIsInstance(response_1.json(), dict)
     #     self.assertListEqual(
     #         ["products", "categories", "filtered_suppliers", "filtered_suppliers2", "filtered_partners"],
@@ -668,7 +655,7 @@ class TestDrfSideloadingValidPrefetches(BaseTestCase):
     #         data={"sideload": "categories,filtered_suppliers,filtered_partners"},
     #         **self.DEFAULT_HEADERS,
     #     )
-    #     self.assertEqual(response_1.status_code, status.HTTP_200_OK)
+    #     self.assertEqual(response_1.status_code, status.HTTP_200_OK, response.json())
     #     self.assertIsInstance(response_1.json(), dict)
     #     self.assertListEqual(
     #         ["products", "categories", "filtered_suppliers", "filtered_partners"],
@@ -835,7 +822,7 @@ class TestDrfSideloadingPrefetchObjectsMatchingLookup(BaseTestCase):
             data={"sideload": "categories,partners"},
             **self.DEFAULT_HEADERS,
         )
-        self.assertEqual(response_1.status_code, status.HTTP_200_OK)
+        self.assertEqual(response_1.status_code, status.HTTP_200_OK, response_1.data)
         self.assertIsInstance(response_1.json(), dict)
         self.assertListEqual(
             ["products", "categories", "partners"],
@@ -941,7 +928,7 @@ class TestDrfSideloadingBrowsableApiPermissions(BaseTestCase):
         response = self.client.get(
             path=reverse("product-list"), data={"sideload": "categories,suppliers,partners"}, **self.DEFAULT_HEADERS
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.json())
         self.assertIsInstance(response.json(), dict)
         self.assertListEqual(["products", "categories", "suppliers", "partners"], list(response.json().keys()))
 
@@ -1014,7 +1001,7 @@ class ProductSideloadSameSourceDuplicationTestCase(BaseTestCase):
         response = self.client.get(
             path=reverse("product-list"), data={"sideload": "categories"}, **self.DEFAULT_HEADERS
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.json())
         self.assertIsInstance(response.json(), dict)
         self.assertListEqual(["products", "category"], list(response.data.serializer.instance.keys()))
         self.assertListEqual(["products", "categories"], list(response.json().keys()))
@@ -1023,7 +1010,7 @@ class ProductSideloadSameSourceDuplicationTestCase(BaseTestCase):
         response = self.client.get(
             path=reverse("product-list"), data={"sideload": "old_categories"}, **self.DEFAULT_HEADERS
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.json())
         self.assertIsInstance(response.json(), dict)
         self.assertListEqual(["products", "category"], list(response.data.serializer.instance.keys()))
         self.assertListEqual(["products", "old_categories"], list(response.json().keys()))
@@ -1032,7 +1019,7 @@ class ProductSideloadSameSourceDuplicationTestCase(BaseTestCase):
         response = self.client.get(
             path=reverse("product-list"), data={"sideload": "categories,old_categories"}, **self.DEFAULT_HEADERS
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.json())
         self.assertIsInstance(response.json(), dict)
         self.assertListEqual(["products", "category"], list(response.data.serializer.instance.keys()))
         self.assertListEqual(["products", "categories", "old_categories"], list(response.json().keys()))
@@ -1047,7 +1034,7 @@ class VersionesSideloadableSerializerTestCase(BaseTestCase):
             # headers:
             HTTP_ACCEPT="application/json; version=1.0",
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.json())
         self.assertIsInstance(response.json(), dict)
         self.assertListEqual(["products", "categories"], list(response.json().keys()))
 
@@ -1058,8 +1045,8 @@ class VersionesSideloadableSerializerTestCase(BaseTestCase):
             # headers:
             HTTP_ACCEPT="application/json; version=2.0.0",
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIsInstance(response.json(), list)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertDictEqual({"sideload": ["'categories' is not one of the available choices."]}, response.json())
 
         # new version called correctly
         response = self.client.get(
@@ -1068,6 +1055,6 @@ class VersionesSideloadableSerializerTestCase(BaseTestCase):
             # headers:
             HTTP_ACCEPT="application/json; version=2.0.0",
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.json())
         self.assertIsInstance(response.json(), dict)
         self.assertListEqual(["products", "new_categories"], list(response.json().keys()))

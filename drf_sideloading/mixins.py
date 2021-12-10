@@ -4,9 +4,9 @@ from itertools import chain
 from typing import Dict, Optional, Union, Tuple, Set
 
 from django.db.models import Prefetch
+from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404
-from rest_framework.renderers import BrowsableAPIRenderer
 from rest_framework.response import Response
 from rest_framework.serializers import ListSerializer
 
@@ -36,8 +36,11 @@ class SideloadableRelationsMixin(object):
         )
         relations_to_sideload = self.parse_query_param(
             sideload_parameter=request.query_params.get(self.sideloading_query_param_name, ""),
-            sideloadable_fields=sideloadable_fields,
         )
+        self.check_sideload_params(
+            relations_to_sideload=relations_to_sideload, sideloadable_fields=sideloadable_fields, prefetches=prefetches
+        )
+
         # find applicable prefetches
         if relations_to_sideload:
             prefetch_relations, relations_sources = self._get_relevant_prefetches(
@@ -58,7 +61,7 @@ class SideloadableRelationsMixin(object):
             relations_sources,
         )
 
-    def parse_query_param(self, sideload_parameter, sideloadable_fields):
+    def parse_query_param(self, sideload_parameter: str) -> Dict:
         """
         Parse query param and take validated names
 
@@ -73,19 +76,36 @@ class SideloadableRelationsMixin(object):
         response changed to dict as the sources for multi source fields must be selectable.
 
         """
-        sideloadable_relations = set(sideloadable_fields.keys())
+        if not sideload_parameter:
+            return {}
 
         relations_to_sideload = {}
         for param in re.split(",\s*(?![^\[\]]*\])", sideload_parameter):
+            if not param:
+                continue
             try:
                 fieldname, sources_str = param.split("[", 1)
                 relations = set(sources_str.strip("]").split(","))
                 if any(relations):
                     relations_to_sideload[fieldname] = set(sources_str.strip("]").split(","))
             except ValueError:
-                if param in sideloadable_relations:
-                    relations_to_sideload[param] = None
+                relations_to_sideload[param] = None
+
         return relations_to_sideload
+
+    def check_sideload_params(self, relations_to_sideload: Dict, sideloadable_fields: Dict, prefetches: Dict):
+        for relation, source_keys in relations_to_sideload.items():
+            if relation not in sideloadable_fields:
+                msg = _(f"'{relation}' is not one of the available choices.")
+                raise ValidationError({self.sideloading_query_param_name: [msg]})
+            if isinstance(source_keys, list):
+                if not isinstance(prefetches.get(relation), dict):
+                    msg = _(f"'{relation}' does not have multiple sources")
+                    raise ValidationError({self.sideloading_query_param_name: [msg]})
+                for source_key in source_keys:
+                    if source_key not in prefetches[relation].keys():
+                        msg = _(f"'{source_key}' is not one of the available source keys for relation '{relation}'")
+                        raise ValidationError({self.sideloading_query_param_name: [msg]})
 
     def check_sideloading_serializer_class(self, serializer_class):
         if not serializer_class:
