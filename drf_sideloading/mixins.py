@@ -98,7 +98,9 @@ class SideloadableRelationsMixin(object):
             if relation not in sideloadable_fields:
                 msg = _(f"'{relation}' is not one of the available choices.")
                 raise ValidationError({self.sideloading_query_param_name: [msg]})
-            if isinstance(source_keys, list):
+            if source_keys is not None:
+                if not isinstance(source_keys, (set, list)):
+                    raise ValueError(f"Source_keys must be a list or set not '{type(source_keys)}'")
                 if not isinstance(prefetches.get(relation), dict):
                     msg = _(f"'{relation}' does not have multiple sources")
                     raise ValidationError({self.sideloading_query_param_name: [msg]})
@@ -581,9 +583,11 @@ class SideloadableRelationsMixin(object):
 
                 if requested_sources:
                     for invalid_source_key in set(requested_sources) - set(relation_prefetches.keys()):
-                        raise ValidationError(
-                            f"source '{invalid_source_key}' has not been implemented for sideloadable field '{relation}'"
+                        msg = _(
+                            f"'{invalid_source_key}' is not one of the available source keys for relation '{relation}'"
                         )
+                        raise ValidationError({self.sideloading_query_param_name: [msg]})
+
                 elif "__all__" in relation_prefetches:
                     # find source in case it's not a Prefetch object.
                     # requested_sources = [relation_prefetches["__all__"].to_attr]
