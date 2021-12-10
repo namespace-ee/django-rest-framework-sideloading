@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.0.0 (2021-12-10)
+
+Major refactoring to allow for multi source fields.
+
+- Add support for multi source fields
+- Add support for detail view sideloading
+- Dropped formless BrowsableAPIRenderer enforcement
+- Raises error in case invalid fields are requested for sideloading
+
 ## 1.4.2 (2021-04-12)
 
 - Add support for lists in filter_related_objects
