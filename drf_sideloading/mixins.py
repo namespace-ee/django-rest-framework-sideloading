@@ -7,6 +7,7 @@ from django.db.models import Prefetch
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404
+from rest_framework.mixins import RetrieveModelMixin, ListModelMixin
 from rest_framework.response import Response
 from rest_framework.serializers import ListSerializer
 
@@ -152,8 +153,17 @@ class SideloadableRelationsMixin(object):
     # modified DRF methods
 
     def retrieve(self, request, *args, **kwargs):
+        if not isinstance(self, RetrieveModelMixin):
+            # The viewset does not have RetrieveModelMixin and therefore the method is not allowed
+            return self.http_method_not_allowed(request, *args, **kwargs)
+
         if self.sideloading_query_param_name not in request.query_params:
-            return super().retrieve(request, *args, **kwargs)
+            try:
+                return super().retrieve(request=request, *args, **kwargs)
+            except AttributeError:
+                # self.retrieve() method was not declared before this mixin.
+                # Make sure the SideloadableRelationsMixin is defined higher than RetrieveModelMixin.
+                return self.http_method_not_allowed(request, *args, **kwargs)
 
         (
             sideloading_serializer_class,
@@ -166,7 +176,12 @@ class SideloadableRelationsMixin(object):
         ) = self.get_sideloading_variables_from_serializer(request=request)
 
         if not relations_to_sideload:
-            return super().retrieve(request, *args, **kwargs)
+            try:
+                return super().retrieve(request=request, *args, **kwargs)
+            except AttributeError:
+                # self.retrieve() method was not declared before this mixin.
+                # Make sure the SideloadableRelationsMixin is defined higher than RetrieveModelMixin.
+                return self.http_method_not_allowed(request, *args, **kwargs)
 
         # return object with sideloading serializer
         queryset, relations_sources = self.get_sideloadable_object_as_queryset(
@@ -189,8 +204,17 @@ class SideloadableRelationsMixin(object):
         return Response(serializer.data)
 
     def list(self, request, *args, **kwargs):
+        if not isinstance(self, ListModelMixin):
+            # The viewset does not have ListModelMixin and therefore the method is not allowed
+            return self.http_method_not_allowed(request, *args, **kwargs)
+
         if request.method != "GET" or self.sideloading_query_param_name not in request.query_params:
-            return super().list(request, *args, **kwargs)
+            try:
+                return super().list(request=request, *args, **kwargs)
+            except AttributeError:
+                # self.list() method was not declared before this mixin.
+                # Make sure the SideloadableRelationsMixin is defined higher than ListModelMixin.
+                return self.http_method_not_allowed(request, *args, **kwargs)
 
         (
             sideloading_serializer_class,
@@ -203,7 +227,12 @@ class SideloadableRelationsMixin(object):
         ) = self.get_sideloading_variables_from_serializer(request=request)
 
         if not relations_to_sideload:
-            return super().list(request, *args, **kwargs)
+            try:
+                return super().list(request=request, *args, **kwargs)
+            except AttributeError:
+                # self.list() method was not declared before this mixin.
+                # Make sure the SideloadableRelationsMixin is defined higher than ListModelMixin.
+                return self.http_method_not_allowed(request, *args, **kwargs)
 
         # After this `relations_to_sideload` is safe to use
         queryset = self.get_queryset()

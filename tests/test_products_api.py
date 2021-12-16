@@ -883,6 +883,66 @@ class TestDrfSideloadingInvalidPrefetchObject(BaseTestCase):
     #         )
 
 
+class TestDrfSideloadingWithoutListModelMixin(BaseTestCase):
+    def test_list(self):
+        response = self.client.get(
+            path=reverse("productretreiveonly-list"),
+            data={"sideload": "categories"},
+            **self.DEFAULT_HEADERS,
+        )
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_detail(self):
+        response = self.client.get(
+            path=reverse("productretreiveonly-detail", args=[self.product1.id]),
+            data={"sideload": "categories"},
+            **self.DEFAULT_HEADERS,
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.json())
+
+
+class TestDrfSideloadingWithoutRetreiveModelMixin(BaseTestCase):
+    def test_list(self):
+        response = self.client.get(
+            path=reverse("productlistonly-list"),
+            data={"sideload": "categories"},
+            **self.DEFAULT_HEADERS,
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.json())
+
+    def test_detail(self):
+        response = self.client.get(
+            path=reverse("productlistonly-detail", args=[self.product1.id]),
+            data={"sideload": "categories"},
+            **self.DEFAULT_HEADERS,
+        )
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+
+class TestDrfSideloadingListModelMixinAfterSideloading(BaseTestCase):
+    # in case the DRF views are added after sideloading,
+    # the list and retreive methods will be overwritten and no sideloading happens.
+
+    def test_list(self):
+        response = self.client.get(
+            path=reverse("productwrongmixinorder-list"),
+            data={"sideload": "categories,suppliers,filtered_suppliers,partners"},
+            **self.DEFAULT_HEADERS,
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.json())
+        self.assertIsInstance(response.json(), list)
+
+    def test_detail(self):
+        response = self.client.get(
+            path=reverse("productwrongmixinorder-detail", args=[self.product1.id]),
+            data={"sideload": "categories,suppliers,filtered_suppliers,partners"},
+            **self.DEFAULT_HEADERS,
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.json())
+        self.assertIsInstance(response.json(), dict)
+        self.assertListEqual(["name", "category", "supplier", "partners"], list(response.json().keys()))
+
+
 class TestDrfSideloadingBrowsableApiPermissions(BaseTestCase):
     """Run tests while including mixin but not defining sideloading"""
 

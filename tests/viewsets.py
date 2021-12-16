@@ -1,4 +1,12 @@
 from rest_framework import viewsets, filters, versioning
+from rest_framework.mixins import (
+    CreateModelMixin,
+    RetrieveModelMixin,
+    UpdateModelMixin,
+    DestroyModelMixin,
+    ListModelMixin,
+)
+from rest_framework.viewsets import GenericViewSet
 
 from drf_sideloading.mixins import SideloadableRelationsMixin
 from tests.mixins import OtherMixin
@@ -28,6 +36,7 @@ class ProductViewSet(SideloadableRelationsMixin, OtherMixin, viewsets.ModelViewS
         # django_filters.rest_framework.DjangoFilterBackend,
     ]
     search_fields = ["name"]
+
     # filter_fields = ["confirmed"]
 
     def get_serializer_class(self):
@@ -39,6 +48,24 @@ class ProductViewSet(SideloadableRelationsMixin, OtherMixin, viewsets.ModelViewS
         if self.request.version == "2.0.0":
             return NewProductSideloadableSerializer
         return self.sideloading_serializer_class
+
+
+class ListOnlyProductViewSet(SideloadableRelationsMixin, OtherMixin, ListModelMixin, GenericViewSet):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    sideloading_serializer_class = ProductSideloadableSerializer
+
+
+class RetreiveOnlyProductViewSet(SideloadableRelationsMixin, OtherMixin, RetrieveModelMixin, GenericViewSet):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    sideloading_serializer_class = ProductSideloadableSerializer
+
+
+class ProductViewSetSideloadingBeforeViews(viewsets.ModelViewSet, SideloadableRelationsMixin, OtherMixin):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    sideloading_serializer_class = ProductSideloadableSerializer
 
 
 class CategoryViewSet(SideloadableRelationsMixin, viewsets.ModelViewSet):
