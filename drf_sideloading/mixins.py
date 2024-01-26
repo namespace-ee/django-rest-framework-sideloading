@@ -237,7 +237,7 @@ class SideloadableRelationsMixin(object):
         # After this `relations_to_sideload` is safe to use
         queryset = self.get_queryset()
         if prefetch_relations:
-            queryset = queryset.prefetch_related(*prefetch_relations.values())
+            queryset = queryset.prefetch_related(*[v for k, v in sorted(prefetch_relations.items())])
         queryset = self.filter_queryset(queryset)
 
         # Create page
@@ -361,7 +361,7 @@ class SideloadableRelationsMixin(object):
         )
 
         if prefetch_relations:
-            queryset = queryset.prefetch_related(*prefetch_relations.values())
+            queryset = queryset.prefetch_related(*[v for k, v in sorted(prefetch_relations.items())])
         queryset = self.filter_queryset(queryset)
 
         # Perform the lookup filtering.
