@@ -1,7 +1,8 @@
 import copy
 import re
+import importlib
 from itertools import chain
-from typing import Dict, Optional, Union, Tuple, Set
+from typing import Dict, Optional, Union, Tuple, Set, List
 
 from django.db.models import Prefetch
 from django.utils.translation import gettext_lazy as _
@@ -17,9 +18,31 @@ from drf_sideloading.serializers import SideLoadableSerializer
 class SideloadableRelationsMixin(object):
     sideloading_query_param_name = "sideload"
     sideloading_serializer_class = None
+    if importlib.util.find_spec("drf_spectacular") is not None:
+        from drf_sideloading.schema import SideloadingAutoSchema
 
-    def __init__(self, **kwargs):
-        super(SideloadableRelationsMixin, self).__init__(**kwargs)
+        # note: if required, the user can overwrite the schema
+        schema = SideloadingAutoSchema()
+
+    def get_sideloading_keys_sources(self) -> Dict[str, List[str]]:
+        sideloading_serializer_class = self.get_sideloading_serializer_class()
+        primary_field_name = sideloading_serializer_class.Meta.primary
+        sideloadable_fields = copy.deepcopy(sideloading_serializer_class._declared_fields)
+        sideloadable_fields.pop(primary_field_name)
+        # cleaned prefetches
+        prefetches = self._gather_all_prefetches(
+            sideloadable_fields=sideloadable_fields,
+            user_defined_prefetches=getattr(sideloading_serializer_class.Meta, "prefetches", None),
+        )
+
+        # gather sideliadabled from prefetched first as it determines if its a multi source sideloading
+        sideloading_keys_sources = {k: [] for k in sideloadable_fields}
+        if isinstance(prefetches, dict):
+            for key, key_prefetches in prefetches.items():
+                if isinstance(key_prefetches, dict):
+                    sideloading_keys_sources[key] = list(key_prefetches.keys())
+
+        return sideloading_keys_sources
 
     # fixme: This is an awkward method
     def get_sideloading_variables_from_serializer(self, request):
