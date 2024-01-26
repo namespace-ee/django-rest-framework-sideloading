@@ -1,11 +1,5 @@
 from rest_framework import viewsets, filters, versioning
-from rest_framework.mixins import (
-    CreateModelMixin,
-    RetrieveModelMixin,
-    UpdateModelMixin,
-    DestroyModelMixin,
-    ListModelMixin,
-)
+from rest_framework.mixins import RetrieveModelMixin, ListModelMixin
 from rest_framework.viewsets import GenericViewSet
 
 from drf_sideloading.mixins import SideloadableRelationsMixin

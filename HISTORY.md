@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.1.0 (2024-01-26)
+
+- Support for Django 4
+  - Django supported versions `4.0 -> 4.2`
+  - Python supported versions `3.10 -> 3.11`
+  - Django-rest-framework supported versions. `3.13 -> 3.14`
+- Fix issue with prefetch ordering
+
 ## 2.0.1 (2021-12-16)
 
 - Ensure that only allowed methods are sideloaded
