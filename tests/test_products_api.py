@@ -191,7 +191,8 @@ class ProductMultiSourceSideloadTestCase(BaseTestCase):
                     "main_suppliers": "supplier",
                     "backup_suppliers": "backup_supplier",
                     "partners": "partners",
-                    # These can be defined to always load them, else they will be copied over form all sources or selected sources only.
+                    # These can be defined to always load them, else they will be
+                    # copied over form all sources or selected sources only.
                     "combined_suppliers": {
                         "suppliers": {"lookup": "supplier"},
                         "backup_suppliers": {"lookup": "backup_supplier"},
@@ -829,7 +830,7 @@ class TestDrfSideloadingPrefetchObjectsMatchingLookup(BaseTestCase):
             list(response_1.json().keys()),
         )
         # check filtered_suppliers and filtered_partners are different from suppliers and partners!
-        partner_names = {partner["name"] for partner in response_1.json()["partners"]}
+        # partner_names = {partner["name"] for partner in response_1.json()["partners"]}
         # FIXME: the Prefetch does not filter the queryset as expected!
         # self.assertSetEqual({"Partner2", "Partner4"}, partner_names)
 

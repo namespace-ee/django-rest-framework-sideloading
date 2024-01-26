@@ -81,7 +81,7 @@ class SideloadableRelationsMixin(object):
             return {}
 
         relations_to_sideload = {}
-        for param in re.split(",\s*(?![^\[\]]*\])", sideload_parameter):
+        for param in re.split(r",\s*(?![^\[\]]*\])", sideload_parameter):
             if not param:
                 continue
             try:
@@ -560,8 +560,8 @@ class SideloadableRelationsMixin(object):
                         data_source = relation
                     else:
                         raise ValueError(
-                            f"Unless source is defined or the field name matches the model, "
-                            f"there can only be one prefetch, to define the relation"
+                            "Unless source is defined or the field name matches the model, "
+                            "there can only be one prefetch, to define the relation"
                         )
                 elif isinstance(relation_prefetches[0], str):
                     data_source = relation_prefetches[0]
@@ -569,8 +569,8 @@ class SideloadableRelationsMixin(object):
                     data_source = relation_prefetches[0].to_attr or relation_prefetches[0].prefetch_through
                 else:
                     raise ValueError(
-                        f"Unless source is defined or the field name matches the model, "
-                        f"There can only be one prefetch, to define the relation and it must be a string or Prefetch"
+                        "Unless source is defined or the field name matches the model, "
+                        "There can only be one prefetch, to define the relation and it must be a string or Prefetch"
                     )
 
                 if any(isinstance(prefetch, Prefetch) for prefetch in relation_prefetches):
@@ -596,8 +596,8 @@ class SideloadableRelationsMixin(object):
                             data_source = relation
                         else:
                             raise ValueError(
-                                f"Unless source is defined or the field name matches the model, "
-                                f"there can only be one prefetch, to define the relation"
+                                "Unless source is defined or the field name matches the model, "
+                                "there can only be one prefetch, to define the relation"
                             )
 
                     for prefetch in relation_prefetches:
@@ -624,7 +624,7 @@ class SideloadableRelationsMixin(object):
                 elif relation_prefetches:
                     requested_sources = list(relation_prefetches.keys())
                 else:
-                    raise ValueError(f"Prefetches missing")
+                    raise ValueError("Prefetches missing")
 
                 # collect field prefetches and sources
                 relations_sources[relation] = dict()

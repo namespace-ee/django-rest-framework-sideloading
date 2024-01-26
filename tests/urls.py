@@ -1,4 +1,4 @@
-from django.conf.urls import url, include
+from django.urls import path, include
 from rest_framework import routers
 
 from tests import viewsets
@@ -14,4 +14,4 @@ router.register(r"category", viewsets.CategoryViewSet)
 router.register(r"supplier", viewsets.SupplierViewSet)
 router.register(r"partner", viewsets.PartnerViewSet)
 
-urlpatterns = [url(r"^", include(router.urls))]
+urlpatterns = [path("", include(router.urls))]
