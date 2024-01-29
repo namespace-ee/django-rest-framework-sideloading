@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.1.1 (2024-01-??)
+
+- Add support for drf_spectacular documentation
+
 ## 2.1.0 (2024-01-26)
 
 - Support for Django 4
