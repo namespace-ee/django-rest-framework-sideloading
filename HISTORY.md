@@ -7,6 +7,7 @@
   - Python supported versions `3.10 -> 3.11`
   - Django-rest-framework supported versions. `3.13 -> 3.14`
 - Fix issue with prefetch ordering
+- Add prefetch related support for multi source fields
 
 ## 2.0.1 (2021-12-16)
 
