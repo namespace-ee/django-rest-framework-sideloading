@@ -58,7 +58,8 @@ class ProductSideloadableSerializer(SideLoadableSerializer):
             "main_suppliers": "supplier",
             "backup_suppliers": "backup_supplier",
             "partners": "partners",
-            # These can be defined to always load them, else they will be copied over form all sources or selected sources only.
+            # These can be defined to always load them, else they will be
+            # copied over form all sources or selected sources only.
             "combined_suppliers": {
                 "suppliers": ["supplier"],
                 "backup_supplier": ["backup_supplier"],
@@ -81,7 +82,8 @@ class NewProductSideloadableSerializer(SideLoadableSerializer):
             "new_main_suppliers": "supplier",
             "new_backup_suppliers": "backup_supplier",
             "new_partners": "partners",
-            # These can be defined to always load them, else they will be copied over form all sources or selected sources only.
+            # These can be defined to always load them, else they will be
+            # copied over form all sources or selected sources only.
             "combined_suppliers": {
                 "suppliers": ["supplier"],
                 "backup_supplier": ["backup_supplier"],

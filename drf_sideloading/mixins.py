@@ -39,7 +39,9 @@ class SideloadableRelationsMixin(object):
             sideload_parameter=request.query_params.get(self.sideloading_query_param_name, ""),
         )
         self.check_sideload_params(
-            relations_to_sideload=relations_to_sideload, sideloadable_fields=sideloadable_fields, prefetches=prefetches
+            relations_to_sideload=relations_to_sideload,
+            sideloadable_fields=sideloadable_fields,
+            prefetches=prefetches,
         )
 
         # find applicable prefetches
@@ -81,7 +83,7 @@ class SideloadableRelationsMixin(object):
             return {}
 
         relations_to_sideload = {}
-        for param in re.split(",\s*(?![^\[\]]*\])", sideload_parameter):
+        for param in re.split(r",\s*(?![^\[\]]*\])", sideload_parameter):
             if not param:
                 continue
             try:
@@ -237,7 +239,7 @@ class SideloadableRelationsMixin(object):
         # After this `relations_to_sideload` is safe to use
         queryset = self.get_queryset()
         if prefetch_relations:
-            queryset = queryset.prefetch_related(*prefetch_relations.values())
+            queryset = queryset.prefetch_related(*[v for k, v in sorted(prefetch_relations.items())])
         queryset = self.filter_queryset(queryset)
 
         # Create page
@@ -338,7 +340,8 @@ class SideloadableRelationsMixin(object):
                     sideloadable_page[relation_key] |= self.filter_related_objects(related_objects=page, lookup=src)
             else:
                 sideloadable_page[relation_key] |= self.filter_related_objects(
-                    related_objects=page, lookup=field_source or relations_sources[relation]
+                    related_objects=page,
+                    lookup=field_source or relations_sources[relation],
                 )
 
         return sideloadable_page
@@ -361,7 +364,7 @@ class SideloadableRelationsMixin(object):
         )
 
         if prefetch_relations:
-            queryset = queryset.prefetch_related(*prefetch_relations.values())
+            queryset = queryset.prefetch_related(*[v for k, v in sorted(prefetch_relations.items())])
         queryset = self.filter_queryset(queryset)
 
         # Perform the lookup filtering.
@@ -476,7 +479,10 @@ class SideloadableRelationsMixin(object):
                     raise ValueError(f"Either source or prefetches must be set for sideloadable field '{relation}'")
             elif isinstance(user_prefetches, (str, list, Prefetch)):
                 cleaned_prefetches[relation] = self._clean_prefetches(
-                    field=field, relation=relation, value=user_prefetches, ensure_list=True
+                    field=field,
+                    relation=relation,
+                    value=user_prefetches,
+                    ensure_list=True,
                 )
             elif isinstance(user_prefetches, dict):
                 # This is a multi source field!
@@ -484,7 +490,10 @@ class SideloadableRelationsMixin(object):
                 cleaned_prefetches[relation] = {}
                 for rel, rel_prefetches in user_prefetches.items():
                     relation_prefetches = self._clean_prefetches(
-                        field=field, relation=rel, value=rel_prefetches, ensure_list=True
+                        field=field,
+                        relation=rel,
+                        value=rel_prefetches,
+                        ensure_list=True,
                     )
                     cleaned_prefetches[relation][rel] = relation_prefetches
             else:
@@ -560,8 +569,8 @@ class SideloadableRelationsMixin(object):
                         data_source = relation
                     else:
                         raise ValueError(
-                            f"Unless source is defined or the field name matches the model, "
-                            f"there can only be one prefetch, to define the relation"
+                            "Unless source is defined or the field name matches the model, "
+                            "there can only be one prefetch, to define the relation"
                         )
                 elif isinstance(relation_prefetches[0], str):
                     data_source = relation_prefetches[0]
@@ -569,8 +578,8 @@ class SideloadableRelationsMixin(object):
                     data_source = relation_prefetches[0].to_attr or relation_prefetches[0].prefetch_through
                 else:
                     raise ValueError(
-                        f"Unless source is defined or the field name matches the model, "
-                        f"There can only be one prefetch, to define the relation and it must be a string or Prefetch"
+                        "Unless source is defined or the field name matches the model, "
+                        "There can only be one prefetch, to define the relation and it must be a string or Prefetch"
                     )
 
                 if any(isinstance(prefetch, Prefetch) for prefetch in relation_prefetches):
@@ -596,8 +605,8 @@ class SideloadableRelationsMixin(object):
                             data_source = relation
                         else:
                             raise ValueError(
-                                f"Unless source is defined or the field name matches the model, "
-                                f"there can only be one prefetch, to define the relation"
+                                "Unless source is defined or the field name matches the model, "
+                                "there can only be one prefetch, to define the relation"
                             )
 
                     for prefetch in relation_prefetches:
@@ -624,7 +633,7 @@ class SideloadableRelationsMixin(object):
                 elif relation_prefetches:
                     requested_sources = list(relation_prefetches.keys())
                 else:
-                    raise ValueError(f"Prefetches missing")
+                    raise ValueError("Prefetches missing")
 
                 # collect field prefetches and sources
                 relations_sources[relation] = dict()
@@ -634,17 +643,28 @@ class SideloadableRelationsMixin(object):
                             "Multiple sources defined for single multi source field. "
                             "Prefetch or select related within Prefetch queryset."
                         )
-                    for source_prefetch in relation_prefetches[source_key]:
-                        if not isinstance(source_prefetch, list):
-                            source_prefetch = [source_prefetch]
-                        if len(source_prefetch) > 1:
-                            raise NotImplementedError(
-                                "prefetching for multi source fields is not implemented. "
-                                "Prefetch or select related within Prefetch queryset."
+                    source_prefetches = relation_prefetches[source_key]
+                    if not isinstance(source_prefetches, list):
+                        source_prefetches = [source_prefetches]
+
+                    if any(isinstance(prefetch, Prefetch) for prefetch in source_prefetches):
+                        # load data from Prefetch.to_attr object used
+                        if len(source_prefetches) != 1:
+                            raise ValueError(
+                                "If Prefetch is used, there can only one prefetch. "
+                                "Others must be defined within Prefetch.queryset"
                             )
-                        for prefetch in source_prefetch:
-                            prefetch_attr = self._add_prefetch(prefetches=gathered_prefetches, prefetch=prefetch)
-                            relations_sources[relation][source_key] = prefetch_attr
+
+                    # This adds all of the required prefetches to prefetches list
+                    source_prefetch_attrs = []
+                    for source_prefetch in source_prefetches:
+                        source_prefetch_attrs.append(
+                            self._add_prefetch(prefetches=gathered_prefetches, prefetch=source_prefetch)
+                        )
+
+                    # This adds the key to what resource needs to be loaded for each source
+                    # Note: sort the source perefetch attrs so that the actual source will be the first one.
+                    relations_sources[relation][source_key] = sorted(source_prefetch_attrs)[0]
             else:
                 raise NotImplementedError(
                     f"Sideloading with prefetch type {type(relation_prefetches)} has not been implemented"
