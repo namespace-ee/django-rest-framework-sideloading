@@ -127,6 +127,7 @@ DRF-sideloading is an extension to provide side-loading functionality of related
    Include **SideloadableRelationsMixin** mixin in ViewSet and define **sideloading_serializer_class** as shown in example below. 
    Everything else stays just like a regular ViewSet.
    Since version 2.0.0 there are 3 new methods that allow to overwrite the serializer used based on the request version for example
+   Since version 2.1.2 an additional method was added that allow to add request dependent filters to sideloaded relations
 
     ```python
     from drf_sideloading.mixins import SideloadableRelationsMixin
@@ -157,6 +158,14 @@ DRF-sideloading is an extension to provide side-loading functionality of related
         def get_sideloading_serializer_context(self):
             # Extra context provided to the serializer class.
             return {"request": self.request, "format": self.format_kwarg, "view": self}
+      
+        def add_sideloading_prefetch_filter(self, source, queryset, request):
+             # 
+            if source == "model1__relation1":
+                return queryset.filter(is_active=True), True
+            if hasattr(queryset, "readable"):
+                return queryset.readable(user=request.user), True
+            return queryset, False
     ```
 
 6. Enjoy your API with sideloading support
