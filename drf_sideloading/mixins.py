@@ -523,7 +523,7 @@ class SideloadableRelationsMixin(object):
                 if field_source:
                     # default to field source if not defined by user
                     cleaned_prefetches[relation] = [field_source]
-                elif getattr(self.primary_field.Meta.model, relation, None):
+                elif getattr(self.primary_field.child.Meta.model, relation, None):
                     # default to parent serializer model field with the relation name if it exists
                     cleaned_prefetches[relation] = [relation]
                 else:
