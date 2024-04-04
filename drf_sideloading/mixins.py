@@ -390,11 +390,10 @@ class SideloadableRelationsMixin(object):
             if isinstance(self.sideloadable_field_sources.get(relation), dict):
                 # Multi source relation
                 for src_key, source_prefetch in self.sideloadable_field_sources[relation].items():
-                    # if not (source_keys is None or src_key in source_keys or src_key == "__all__"):
-                    #     raise ValueError(f"Unexpected relation source '{src_key}' used")
-                    sideloadable_page[relation_key] |= self.filter_related_objects(
-                        related_objects=page, lookup=source_prefetch
-                    )
+                    if not source_keys or src_key in source_keys:
+                        sideloadable_page[relation_key] |= self.filter_related_objects(
+                            related_objects=page, lookup=source_prefetch
+                        )
             else:
                 sideloadable_page[relation_key] |= self.filter_related_objects(
                     related_objects=page, lookup=field_source or self.sideloadable_field_sources[relation]
