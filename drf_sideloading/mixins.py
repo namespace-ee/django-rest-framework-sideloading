@@ -271,10 +271,12 @@ class SideloadableRelationsMixin(object):
         if not relations_to_sideload:
             try:
                 return super().retrieve(request=request, *args, **kwargs)
-            except AttributeError:
-                # self.retrieve() method was not declared before this mixin.
-                # Make sure the SideloadableRelationsMixin is defined higher than RetrieveModelMixin.
-                return self.http_method_not_allowed(request, *args, **kwargs)
+            except AttributeError as exc:
+                if "super' object has no attribute 'retrieve'" in exc.args[0]:
+                    # self.retrieve() method was not declared before this mixin.
+                    # Make sure the SideloadableRelationsMixin is defined higher than RetrieveModelMixin.
+                    return self.http_method_not_allowed(request, *args, **kwargs)
+                raise exc
 
         # return object with sideloading serializer
         queryset = self.get_sideloadable_object_as_queryset(
@@ -301,10 +303,12 @@ class SideloadableRelationsMixin(object):
         if not relations_to_sideload:
             try:
                 return super().list(request=request, *args, **kwargs)
-            except AttributeError:
-                # self.retrieve() method was not declared before this mixin.
-                # Make sure the SideloadableRelationsMixin is defined higher than RetrieveModelMixin.
-                return self.http_method_not_allowed(request, *args, **kwargs)
+            except AttributeError as exc:
+                if "super' object has no attribute 'list'" in exc.args[0]:
+                    # self.list() method was not declared before this mixin.
+                    # Make sure the SideloadableRelationsMixin is defined higher than ListModelMixin.
+                    return self.http_method_not_allowed(request, *args, **kwargs)
+                raise exc
 
         # After this `relations_to_sideload` is safe to use
         queryset = self.get_queryset()
