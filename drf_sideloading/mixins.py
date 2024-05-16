@@ -1,4 +1,5 @@
 import copy
+import importlib
 import re
 from itertools import chain
 from typing import Dict, Optional, Union, Set, List
@@ -19,6 +20,7 @@ from rest_framework.response import Response
 from rest_framework.serializers import ListSerializer
 
 from drf_sideloading.serializers import SideLoadableSerializer
+
 
 RELATION_DESCRIPTORS = [
     ForwardManyToOneDescriptor,
@@ -55,6 +57,11 @@ class SideloadableRelationsMixin(object):
     user_defined_prefetches: Dict = {}
     primary_field = None
     sideloadable_field_sources: Dict = {}
+    if importlib.util.find_spec("drf_spectacular") is not None:
+        from drf_sideloading.schema import SideloadingAutoSchema
+
+        # note: if required, the user can overwrite the schema
+        schema = SideloadingAutoSchema()
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -89,8 +96,10 @@ class SideloadableRelationsMixin(object):
             return sorted(self.get_source_from_prefetch(v) for v in prefetches)[0]
 
     def get_sideloading_field_sources(self) -> Dict:
-        relations_sources = {}
+        if not self.sideloadable_fields:
+            raise ValueError("Sideloading serializer has not been initialized")
 
+        relations_sources = {}
         for relation, field in self.sideloadable_fields.items():
             relation_prefetches = self.user_defined_prefetches.get(relation)
             sideloadable_field_source = field.child.source
@@ -514,7 +523,7 @@ class SideloadableRelationsMixin(object):
         cleaned_prefetches = {}
 
         if not self.sideloadable_fields:
-            raise ValueError("'sideloadable_fields' is a required argument")
+            raise ValueError("Sideloading serializer has not been initialized")
 
         # find prefetches for all sideloadable relations
         for relation, field in self.sideloadable_fields.items():
