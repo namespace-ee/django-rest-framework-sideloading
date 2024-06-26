@@ -10,7 +10,7 @@ recommonmark
 # supported django and DRF
 django>=2.2,<4.0
 djangorestframework>=3.9,<4.0
-djangorestframework==3.12.4
+djangorestframework==3.15.2
 
 # to test conflicts with filtering
 django-filter
