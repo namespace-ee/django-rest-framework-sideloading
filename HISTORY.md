@@ -1,5 +1,16 @@
 # Changelog
 
+
+## 2.1.2 (2024-01-??)
+
+- Add support for request dependant prefetch filtering
+- refactored code for better readability
+- prefetches from view are also used when determining sideloading prefetches 
+
+## 2.1.1 (2024-01-??)
+
+- Add support for drf_spectacular documentation
+
 ## 2.1.0 (2024-01-26)
 
 - Support for Django 4
