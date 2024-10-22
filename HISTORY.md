@@ -1,7 +1,7 @@
 # Changelog
 
 
-## 2.2.0 (2024-10-??)
+## 2.2.0 (2024-10-22)
 - Support for Django 5
   - Django supported versions `5.0 -> 5.1`
   - Python supported versions `3.10 -> 3.12`
