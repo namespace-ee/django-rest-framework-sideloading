@@ -625,7 +625,6 @@ class SideloadableRelationsMixin(object):
         if not existing_prefetch:
             prefetches[prefetch_attr] = prefetch
         elif isinstance(existing_prefetch, str):
-            # fixme: Check if different filters where applied to Prefetch queryset.
             if isinstance(prefetch, str):
                 if prefetch != existing_prefetch:
                     raise ValueError("Got different string prefetches to the same attribute name")
