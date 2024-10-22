@@ -407,10 +407,8 @@ class SideloadableRelationsMixin(object):
                             ]:
                                 related_ids |= set(prefetched_data.values_list("id", flat=True))
                             elif isinstance(prefetched_data, models.Model):
-                                print("models.Model")
                                 related_ids.add(prefetched_data.id)
                             elif isinstance(prefetched_data, list):
-                                print(list)
                                 try:
                                     related_ids |= set(x.id for x in prefetched_data)
                                 except AttributeError:
