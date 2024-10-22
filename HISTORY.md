@@ -1,6 +1,12 @@
 # Changelog
 
 
+## 2.2.0 (2024-10-??)
+- Support for Django 5
+  - Django supported versions `5.0 -> 5.1`
+  - Python supported versions `3.10 -> 3.12`
+  - Django-rest-framework supported versions. `3.15`
+
 ## 2.1.2 (2024-01-??)
 
 - Add support for request dependant prefetch filtering
