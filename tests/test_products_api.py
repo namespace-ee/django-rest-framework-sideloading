@@ -162,7 +162,7 @@ class ProductSideloadTestCase(BaseTestCase):
     def test_sideloading_param_wrongly_formed_query(self):
         response = self.client.get(
             path=reverse("product-list"),
-            data={"sideload": ",,@,123,categories,123,.unexisting,123,,,,suppliers,!@"},
+            data={"sideload": "@,123,categories,123,.unexisting,123,,,,suppliers,!@"},
             **self.DEFAULT_HEADERS,
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
