@@ -4,7 +4,8 @@ import re
 from itertools import chain
 from typing import Dict, Optional, Union, Set, List
 
-from django.db.models import Prefetch
+from django.db import models
+from django.db.models import Prefetch, QuerySet
 from django.db.models.fields.related_descriptors import (
     ForwardManyToOneDescriptor,
     ForwardOneToOneDescriptor,
@@ -382,9 +383,45 @@ class SideloadableRelationsMixin(object):
                     if src_key in source_keys or source_keys is None or src_key == "__all__":
                         related_ids |= set(queryset.values_list(src, flat=True))
             else:
-                related_ids |= set(
-                    queryset.values_list(field_source or self.sideloadable_field_sources[relation], flat=True)
+                prefetch_key = field_source or self.sideloadable_field_sources[relation]
+                prefetch_object = next(
+                    (x for x in queryset._prefetch_related_lookups if getattr(x, "prefetch_to", None) == prefetch_key),
+                    None,
                 )
+                if prefetch_key in queryset._prefetch_related_lookups:
+                    related_ids |= set(queryset.values_list(prefetch_key, flat=True))
+                elif prefetch_object:
+                    if prefetch_object.queryset:
+                        # performance thing?
+                        # related_ids |= set(
+                        #     prefetch_object.queryset.filter(
+                        #         id__in=(queryset.values_list(prefetch_key, flat=True))
+                        #     ).values_list("id", flat=True)
+                        # )
+
+                        for obj in queryset.all():
+                            prefetched_data = getattr(obj, prefetch_key)
+                            if prefetched_data.__class__.__name__ in [
+                                "ManyRelatedManager",
+                                "RelatedManager",
+                            ]:
+                                related_ids |= set(prefetched_data.values_list("id", flat=True))
+                            elif isinstance(prefetched_data, models.Model):
+                                print("models.Model")
+                                related_ids.add(prefetched_data.id)
+                            elif isinstance(prefetched_data, list):
+                                print(list)
+                                try:
+                                    related_ids |= set(x.id for x in prefetched_data)
+                                except AttributeError:
+                                    related_ids |= set(prefetched_data)
+                            elif prefetched_data:
+                                raise ValueError("???")
+
+                    else:
+                        related_ids |= set(queryset.values_list(prefetch_key, flat=True))
+                else:
+                    raise ValueError(f"No prefetch for {prefetch_key} found!")
 
             sideloadable_page[relation_key] = source_model.objects.filter(id__in=related_ids)
 
