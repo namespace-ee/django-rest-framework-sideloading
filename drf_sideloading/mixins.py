@@ -81,7 +81,7 @@ class SideloadableRelationsMixin(object):
         self.user_defined_prefetches = getattr(sideloading_serializer_class.Meta, "prefetches", {})
         self.sideloadable_field_sources = self.get_sideloading_field_sources()
 
-    def get_source_from_prefetch(self, prefetches: str | List | Dict):
+    def get_source_from_prefetch(self, prefetches: Union[str, List, Dict]):
         if isinstance(prefetches, str):
             return prefetches
         if isinstance(prefetches, Prefetch):
@@ -127,7 +127,7 @@ class SideloadableRelationsMixin(object):
 
         return relations_sources
 
-    def get_relations_to_sideload(self, request) -> Dict | None:
+    def get_relations_to_sideload(self, request) -> Optional[Dict]:
         """
         Parse query param and take validated names
 
@@ -157,7 +157,7 @@ class SideloadableRelationsMixin(object):
         self.initialize_serializer(request=request)
 
         relations_to_sideload = {}
-        for param in re.split(",\s*(?![^\[\]]*\])", sideload_parameter):
+        for param in re.split(r",\s*(?![^\[\]]*\])", sideload_parameter):
             if "[" in param:
                 fieldname, sources_str = param.split("[", 1)
                 if not sources_str.strip("]"):
@@ -585,7 +585,7 @@ class SideloadableRelationsMixin(object):
 
         return queryset, False
 
-    def _add_sideloading_filter(self, prefetch: str | Prefetch, request) -> str | Prefetch:
+    def _add_sideloading_filter(self, prefetch: Union[str, Prefetch], request) -> Union[str, Prefetch]:
         # fetch sideloadable source and queryset
         prefetch_source = self.get_source_from_prefetch(prefetches=prefetch)
         prefetch_queryset = self.get_sideloadable_queryset(prefetch)
@@ -616,7 +616,7 @@ class SideloadableRelationsMixin(object):
         if not isinstance(prefetch, (str, Prefetch)):
             raise ValueError(f"Adding prefetch of type '{type(prefetch)}' has not been implemented")
         if isinstance(prefetch, str) and len(prefetch) == 1:
-            raise ValueError(f"single letter prefetches are not allowed")
+            raise ValueError("single letter prefetches are not allowed")
 
         prefetch = self._add_sideloading_filter(prefetch=prefetch, request=request)
 
@@ -643,7 +643,8 @@ class SideloadableRelationsMixin(object):
                 if existing_prefetch.queryset.query.where:
                     raise ValueError(
                         f"Can't add non-filtered prefetch '{prefetch_attr}'. Existing Prefetch has filters applied. "
-                        "sideloading serializer tries to apply a non-filtered prefetch to a previously filtered prefetch"
+                        "Sideloading serializer tries to apply a non-filtered prefetch to a previously filtered "
+                        "prefetch"
                     )
                 # Don't make any changes as the Prefetch does not have filters
             elif isinstance(prefetch, Prefetch):
@@ -653,7 +654,8 @@ class SideloadableRelationsMixin(object):
                     )
                 if set(prefetch.queryset.query.where.children) != set(existing_prefetch.queryset.query.where.children):
                     raise ValueError(
-                        f"Can't add filtered Prefetch '{prefetch_attr}'. Existing Prefetch has different filters applied. "
+                        f"Can't add filtered Prefetch '{prefetch_attr}'. "
+                        "Existing Prefetch has different filters applied. "
                         "Check that sideloading serializer and view prefetch_related values don't clash"
                     )
                 # Don't make any changes as the filters have to match each other
