@@ -5,7 +5,7 @@ from itertools import chain
 from typing import Dict, Optional, Union, Set, List
 
 from django.db import models
-from django.db.models import Prefetch, QuerySet
+from django.db.models import Prefetch
 from django.db.models.fields.related_descriptors import (
     ForwardManyToOneDescriptor,
     ForwardOneToOneDescriptor,
