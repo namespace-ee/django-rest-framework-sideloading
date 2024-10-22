@@ -102,6 +102,12 @@ class SideloadableRelationsMixin(object):
         relations_sources = {}
         for relation, field in self.sideloadable_fields.items():
             relation_prefetches = self.user_defined_prefetches.get(relation)
+            if isinstance(relation_prefetches, dict) and any(isinstance(v, dict) for v in relation_prefetches.values()):
+                relation_prefetches = {
+                    k: self._clean_prefetches(field=field, relation=relation, value=v)
+                    for k, v in relation_prefetches.items()
+                }
+
             sideloadable_field_source = field.child.source
 
             # its a MultiSource field, fetch values from sources defined with prefetches.
@@ -370,11 +376,11 @@ class SideloadableRelationsMixin(object):
             relation_key = field_source or relation
 
             related_ids = set()
-            if isinstance(self.sideloadable_field_sources.get(relation), dict):
-                for src_key, src in self.sideloadable_field_sources[relation].items():
-                    if not (source_keys is None or src_key in source_keys or src_key == "__all__"):
-                        raise ValueError(f"Unexpected relation source '{src_key}' used")
-                    related_ids |= set(queryset.values_list(src, flat=True))
+            sideloadable_field_source = self.sideloadable_field_sources.get(relation)
+            if isinstance(sideloadable_field_source, dict):
+                for src_key, src in sideloadable_field_source.items():
+                    if src_key in source_keys or source_keys is None or src_key == "__all__":
+                        related_ids |= set(queryset.values_list(src, flat=True))
             else:
                 related_ids |= set(
                     queryset.values_list(field_source or self.sideloadable_field_sources[relation], flat=True)

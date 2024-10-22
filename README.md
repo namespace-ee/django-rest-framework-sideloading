@@ -145,11 +145,11 @@ DRF-sideloading is an extension to provide side-loading functionality of related
             # Add prefetches for the viewset as normal 
             return super().get_queryset().prefetch_related("created_by")
    
-        def get_sideloading_serializer_class(self):
+        def get_sideloading_serializer_class(self, request=None):
             # use a different sideloadable serializer for older version 
             if self.request.version < "1.0.0":
                 return OldProductSideloadableSerializer
-            return super().get_sideloading_serializer_class()
+            return super().get_sideloading_serializer_class(request=request)
    
         def get_sideloading_serializer(self, *args, **kwargs):
             # if modifications are required to the serializer initialization this method can be used.
