@@ -1,3 +1,5 @@
+setuptools
+
 coverage==4.3.4
 mock>=1.0.1
 flake8>=2.1.0
@@ -8,9 +10,8 @@ sphinx
 recommonmark
 
 # supported django and DRF
-django>=2.2,<4.0
+django>=2.2,<5.2
 djangorestframework>=3.9,<4.0
-djangorestframework==3.12.4
 
 # to test conflicts with filtering
 django-filter

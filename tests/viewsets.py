@@ -1,11 +1,5 @@
 from rest_framework import viewsets, filters, versioning
-from rest_framework.mixins import (
-    CreateModelMixin,
-    RetrieveModelMixin,
-    UpdateModelMixin,
-    DestroyModelMixin,
-    ListModelMixin,
-)
+from rest_framework.mixins import RetrieveModelMixin, ListModelMixin
 from rest_framework.viewsets import GenericViewSet
 
 from drf_sideloading.mixins import SideloadableRelationsMixin
@@ -43,11 +37,11 @@ class ProductViewSet(SideloadableRelationsMixin, OtherMixin, viewsets.ModelViewS
         # if no super is called sideloading should still work
         return self.serializer_class
 
-    def get_sideloading_serializer_class(self):
+    def get_sideloading_serializer_class(self, request=None):
         # if no super is called sideloading should still work
         if self.request.version == "2.0.0":
             return NewProductSideloadableSerializer
-        return self.sideloading_serializer_class
+        return super().get_sideloading_serializer_class(request=request)
 
 
 class ListOnlyProductViewSet(SideloadableRelationsMixin, OtherMixin, ListModelMixin, GenericViewSet):
