@@ -40,3 +40,9 @@ STATIC_URL = "/static/"
 SITE_ID = 1
 
 MIDDLEWARE = ()
+
+
+REST_FRAMEWORK = {
+    "DEFAULT_PAGINATION_CLASS": "tests.pagination.LinkHeaderCursorPagination",
+    "PAGE_SIZE": 10,
+}

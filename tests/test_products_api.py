@@ -1,3 +1,5 @@
+import re
+
 from django.db.models import Prefetch
 from django.test import TestCase
 from django.urls import reverse
@@ -47,11 +49,13 @@ class BaseTestCase(TestCase):
         self.product1.save()
 
         self.product2 = Product.objects.create(name="Product2", category=self.category, supplier=self.supplier2)
-        self.product1.partners.add(self.partner2)
-        self.product1.save()
+        self.product2.partners.add(self.partner2)
+        self.product2.save()
+
         self.product3 = Product.objects.create(name="Product3", category=self.category, supplier=self.supplier3)
-        self.product1.partners.add(self.partner3)
-        self.product1.save()
+        self.product3.partners.add(self.partner3)
+        self.product3.save()
+
         self.product4 = Product.objects.create(name="Product4", category=self.category, supplier=self.supplier4)
 
 
@@ -103,6 +107,45 @@ class ProductSideloadTestCase(BaseTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.json())
         self.assertIsInstance(response.json(), dict)
         self.assertListEqual(["products", "suppliers", "partners"], list(response.json().keys()))
+        self.assertEqual(4, len(response.json()["products"]))
+        self.assertEqual(4, len(response.json()["suppliers"]))
+        self.assertEqual(4, len(response.json()["partners"]))
+
+    def test_list_sideloading_next_page(self):
+        """Test sideloading for selected relations"""
+        response = self.client.get(
+            path=reverse("product-list"),
+            data={"sideload": "suppliers,partners", "page_size": 2},
+            **self.DEFAULT_HEADERS,
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.json())
+        self.assertIsInstance(response.json(), dict)
+        self.assertListEqual(["products", "suppliers", "partners"], list(response.json().keys()))
+        self.assertEqual(2, len(response.json()["products"]))
+        self.assertEqual(2, len(response.json()["suppliers"]))
+        self.assertEqual(3, len(response.json()["partners"]))
+
+        link_header = response.headers.get("Link")
+        print(response.headers)
+        x = {
+            "Content-Type": "application/json",
+            "Link": '<http://testserver/product/?cursor=cD0y&page_size=2&sideload=suppliers%2Cpartners>; rel="next"',
+            "Vary": "Accept",
+            "Allow": "GET, POST, HEAD, OPTIONS",
+        }
+
+        match = re.search(r'<(?P<url>http[s]?://[^\s>]+)>;\s*rel="next"', link_header)
+        print(match.group("url"))
+        response = self.client.get(
+            path=match.group("url"),
+            **self.DEFAULT_HEADERS,
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.json())
+        self.assertIsInstance(response.json(), dict)
+        self.assertListEqual(["products", "suppliers", "partners"], list(response.json().keys()))
+        self.assertEqual(2, len(response.json()["products"]))
+        self.assertEqual(2, len(response.json()["suppliers"]))
+        self.assertEqual(1, len(response.json()["partners"]))
 
     def test_detail(self):
         response = self.client.get(path=reverse("product-detail", args=[self.product1.id]), **self.DEFAULT_HEADERS)

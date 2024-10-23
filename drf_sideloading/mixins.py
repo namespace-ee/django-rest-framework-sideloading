@@ -500,7 +500,6 @@ class SideloadableRelationsMixin(object):
 
         if lookup_values:
             if lookup_values[0].__class__.__name__ in ["ManyRelatedManager", "RelatedManager"]:
-                # FIXME: apply filtering here!
                 related_objects_set = set(chain(*[related_queryset.all() for related_queryset in lookup_values]))
             elif isinstance(lookup_values[0], list):
                 related_objects_set = set(chain(*[related_list for related_list in lookup_values]))
