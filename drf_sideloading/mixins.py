@@ -4,6 +4,7 @@ import re
 from itertools import chain
 from typing import Dict, Optional, Union, Set, List
 
+from django.db import models
 from django.db.models import Prefetch
 from django.db.models.fields.related_descriptors import (
     ForwardManyToOneDescriptor,
@@ -81,7 +82,7 @@ class SideloadableRelationsMixin(object):
         self.user_defined_prefetches = getattr(sideloading_serializer_class.Meta, "prefetches", {})
         self.sideloadable_field_sources = self.get_sideloading_field_sources()
 
-    def get_source_from_prefetch(self, prefetches: str | List | Dict):
+    def get_source_from_prefetch(self, prefetches: Union[str, List, Dict]):
         if isinstance(prefetches, str):
             return prefetches
         if isinstance(prefetches, Prefetch):
@@ -127,7 +128,7 @@ class SideloadableRelationsMixin(object):
 
         return relations_sources
 
-    def get_relations_to_sideload(self, request) -> Dict | None:
+    def get_relations_to_sideload(self, request) -> Optional[Dict]:
         """
         Parse query param and take validated names
 
@@ -157,7 +158,7 @@ class SideloadableRelationsMixin(object):
         self.initialize_serializer(request=request)
 
         relations_to_sideload = {}
-        for param in re.split(",\s*(?![^\[\]]*\])", sideload_parameter):
+        for param in re.split(r",\s*(?![^\[\]]*\])", sideload_parameter):
             if "[" in param:
                 fieldname, sources_str = param.split("[", 1)
                 if not sources_str.strip("]"):
@@ -382,9 +383,43 @@ class SideloadableRelationsMixin(object):
                     if src_key in source_keys or source_keys is None or src_key == "__all__":
                         related_ids |= set(queryset.values_list(src, flat=True))
             else:
-                related_ids |= set(
-                    queryset.values_list(field_source or self.sideloadable_field_sources[relation], flat=True)
+                prefetch_key = field_source or self.sideloadable_field_sources[relation]
+                prefetch_object = next(
+                    (x for x in queryset._prefetch_related_lookups if getattr(x, "prefetch_to", None) == prefetch_key),
+                    None,
                 )
+                if prefetch_key in queryset._prefetch_related_lookups:
+                    related_ids |= set(queryset.values_list(prefetch_key, flat=True))
+                elif prefetch_object:
+                    if prefetch_object.queryset:
+                        # performance thing?
+                        # related_ids |= set(
+                        #     prefetch_object.queryset.filter(
+                        #         id__in=(queryset.values_list(prefetch_key, flat=True))
+                        #     ).values_list("id", flat=True)
+                        # )
+
+                        for obj in queryset.all():
+                            prefetched_data = getattr(obj, prefetch_key)
+                            if prefetched_data.__class__.__name__ in [
+                                "ManyRelatedManager",
+                                "RelatedManager",
+                            ]:
+                                related_ids |= set(prefetched_data.values_list("id", flat=True))
+                            elif isinstance(prefetched_data, models.Model):
+                                related_ids.add(prefetched_data.id)
+                            elif isinstance(prefetched_data, list):
+                                try:
+                                    related_ids |= set(x.id for x in prefetched_data)
+                                except AttributeError:
+                                    related_ids |= set(prefetched_data)
+                            elif prefetched_data:
+                                raise ValueError("???")
+
+                    else:
+                        related_ids |= set(queryset.values_list(prefetch_key, flat=True))
+                else:
+                    raise ValueError(f"No prefetch for {prefetch_key} found!")
 
             sideloadable_page[relation_key] = source_model.objects.filter(id__in=related_ids)
 
@@ -585,7 +620,7 @@ class SideloadableRelationsMixin(object):
 
         return queryset, False
 
-    def _add_sideloading_filter(self, prefetch: str | Prefetch, request) -> str | Prefetch:
+    def _add_sideloading_filter(self, prefetch: Union[str, Prefetch], request) -> Union[str, Prefetch]:
         # fetch sideloadable source and queryset
         prefetch_source = self.get_source_from_prefetch(prefetches=prefetch)
         prefetch_queryset = self.get_sideloadable_queryset(prefetch)
@@ -616,7 +651,7 @@ class SideloadableRelationsMixin(object):
         if not isinstance(prefetch, (str, Prefetch)):
             raise ValueError(f"Adding prefetch of type '{type(prefetch)}' has not been implemented")
         if isinstance(prefetch, str) and len(prefetch) == 1:
-            raise ValueError(f"single letter prefetches are not allowed")
+            raise ValueError("single letter prefetches are not allowed")
 
         prefetch = self._add_sideloading_filter(prefetch=prefetch, request=request)
 
@@ -625,7 +660,6 @@ class SideloadableRelationsMixin(object):
         if not existing_prefetch:
             prefetches[prefetch_attr] = prefetch
         elif isinstance(existing_prefetch, str):
-            # fixme: Check if different filters where applied to Prefetch queryset.
             if isinstance(prefetch, str):
                 if prefetch != existing_prefetch:
                     raise ValueError("Got different string prefetches to the same attribute name")
@@ -643,7 +677,8 @@ class SideloadableRelationsMixin(object):
                 if existing_prefetch.queryset.query.where:
                     raise ValueError(
                         f"Can't add non-filtered prefetch '{prefetch_attr}'. Existing Prefetch has filters applied. "
-                        "sideloading serializer tries to apply a non-filtered prefetch to a previously filtered prefetch"
+                        "Sideloading serializer tries to apply a non-filtered prefetch to a previously filtered "
+                        "prefetch"
                     )
                 # Don't make any changes as the Prefetch does not have filters
             elif isinstance(prefetch, Prefetch):
@@ -653,7 +688,8 @@ class SideloadableRelationsMixin(object):
                     )
                 if set(prefetch.queryset.query.where.children) != set(existing_prefetch.queryset.query.where.children):
                     raise ValueError(
-                        f"Can't add filtered Prefetch '{prefetch_attr}'. Existing Prefetch has different filters applied. "
+                        f"Can't add filtered Prefetch '{prefetch_attr}'. "
+                        "Existing Prefetch has different filters applied. "
                         "Check that sideloading serializer and view prefetch_related values don't clash"
                     )
                 # Don't make any changes as the filters have to match each other
