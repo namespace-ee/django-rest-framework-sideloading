@@ -162,7 +162,7 @@ class ProductSideloadTestCase(BaseTestCase):
     def test_sideloading_param_wrongly_formed_query(self):
         response = self.client.get(
             path=reverse("product-list"),
-            data={"sideload": ",,@,123,categories,123,.unexisting,123,,,,suppliers,!@"},
+            data={"sideload": "@,123,categories,123,.unexisting,123,,,,suppliers,!@"},
             **self.DEFAULT_HEADERS,
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -579,96 +579,91 @@ class TestDrfSideloadingValidPrefetches(BaseTestCase):
         partner_names = {partner["name"] for partner in response_2.json()["partners"]}
         self.assertSetEqual({"Partner1", "Partner2", "Partner3", "Partner4"}, partner_names)
 
-    # # fixme: for some reason, the filtered_suppliers is not sideloaded altho Prefetch present in queryset arguments
-    # #  because queryset is called as a generator maybe? In that case, the prefetches do nothing
-    # def test_sideloading_normally(self):
-    #     response_1 = self.client.get(
-    #         path=reverse("product-list"),
-    #         data={"sideload": "categories,suppliers,filtered_suppliers,partners,filtered_partners"},
-    #         **self.DEFAULT_HEADERS,
-    #     )
-    #     self.assertEqual(response_1.status_code, status.HTTP_200_OK, response.json())
-    #     self.assertIsInstance(response_1.json(), dict)
-    #     self.assertListEqual(
-    #         ["products", "categories", "suppliers", "filtered_suppliers", "partners", "filtered_partners"],
-    #         list(response_1.json().keys()),
-    #     )
-    #     # check filtered_suppliers and filtered_partners are different from suppliers and partners!
-    #     supplier_names = {partner["name"] for partner in response_1.json()["suppliers"]}
-    #     self.assertSetEqual({"Supplier1", "Supplier2", "Supplier3", "Supplier4"}, supplier_names)
-    #
-    #     filtered_supplier_names = {partner["name"] for partner in response_1.json()["filtered_suppliers"]}
-    #     self.assertSetEqual({"Supplier2", "Supplier4"}, filtered_supplier_names)
-    #
-    #     partner_names = {partner["name"] for partner in response_1.json()["partners"]}
-    #     self.assertSetEqual({"Partner1", "Partner2", "Partner3", "Partner4"}, partner_names)
-    #
-    #     filtered_partner_names = {partner["name"] for partner in response_1.json()["filtered_partners"]}
-    #     self.assertSetEqual({"Partner2", "Partner4"}, filtered_partner_names)
-    #
-    # # fixme: for some reason, the filtered_suppliers is not sideloaded altho Prefetch present in queryset arguments
-    # def test_sideloading_with_filtered_prefetch(self):
-    #     response_1 = self.client.get(
-    #         path=reverse("product-list"),
-    #         data={"sideload": "filtered_suppliers,filtered_partners"},
-    #         **self.DEFAULT_HEADERS,
-    #     )
-    #     self.assertEqual(response_1.status_code, status.HTTP_200_OK, response.json())
-    #     self.assertIsInstance(response_1.json(), dict)
-    #     self.assertListEqual(
-    #         ["products", "filtered_suppliers", "filtered_partners"],
-    #         list(response_1.json().keys()),
-    #     )
-    #     filtered_supplier_names = {partner["name"] for partner in response_1.json()["filtered_suppliers"]}
-    #     self.assertSetEqual({"Supplier2", "Supplier4"}, filtered_supplier_names)
-    #
-    #     filtered_partner_names = {partner["name"] for partner in response_1.json()["filtered_partners"]}
-    #     self.assertSetEqual({"Partner2", "Partner4"}, filtered_partner_names)
-    #
-    # # fixme: for some reason, the filtered_suppliers is not sideloaded altho Prefetch present in queryset arguments
-    # def test_sideloading_with_filtered_prefetches(self):
-    #     response_1 = self.client.get(
-    #         path=reverse("product-list"),
-    #         data={"sideload": "categories,filtered_suppliers,filtered_suppliers2,filtered_partners"},
-    #         **self.DEFAULT_HEADERS,
-    #     )
-    #     self.assertEqual(response_1.status_code, status.HTTP_200_OK, response.json())
-    #     self.assertIsInstance(response_1.json(), dict)
-    #     self.assertListEqual(
-    #         ["products", "categories", "filtered_suppliers", "filtered_suppliers2", "filtered_partners"],
-    #         list(response_1.json().keys()),
-    #     )
-    #     # check filtered_suppliers and filtered_partners are different from suppliers and partners!
-    #
-    #     filtered_supplier_names = {supplier["name"] for supplier in response_1.json()["filtered_suppliers"]}
-    #     self.assertSetEqual({"Supplier2", "Supplier4"}, filtered_supplier_names)
-    #
-    #     filtered_supplier_names = {supplier["name"] for supplier in response_1.json()["filtered_suppliers2"]}
-    #     self.assertSetEqual({"Supplier3"}, filtered_supplier_names)
-    #
-    #     filtered_partner_names = {partner["name"] for partner in response_1.json()["filtered_partners"]}
-    #     self.assertSetEqual({"Partner2", "Partner4"}, filtered_partner_names)
-    #
-    # # fixme: for some reason, the filtered_suppliers is not sideloaded altho Prefetch present in queryset arguments
-    # def test_sideloading_combined_suppliers_with_filtered_prefetches(self):
-    #     response_1 = self.client.get(
-    #         path=reverse("product-list"),
-    #         data={"sideload": "categories,filtered_suppliers,filtered_partners"},
-    #         **self.DEFAULT_HEADERS,
-    #     )
-    #     self.assertEqual(response_1.status_code, status.HTTP_200_OK, response.json())
-    #     self.assertIsInstance(response_1.json(), dict)
-    #     self.assertListEqual(
-    #         ["products", "categories", "filtered_suppliers", "filtered_partners"],
-    #         list(response_1.json().keys()),
-    #     )
-    #     # check filtered_suppliers and filtered_partners are different from suppliers and partners!
-    #
-    #     filtered_supplier_names = {partner["name"] for partner in response_1.json()["filtered_suppliers"]}
-    #     self.assertSetEqual({"Supplier2", "Supplier4"}, filtered_supplier_names)
-    #
-    #     filtered_partner_names = {partner["name"] for partner in response_1.json()["filtered_partners"]}
-    #     self.assertSetEqual({"Partner2", "Partner4"}, filtered_partner_names)
+    def test_sideloading_normally(self):
+        response_1 = self.client.get(
+            path=reverse("product-list"),
+            data={"sideload": "categories,suppliers,filtered_suppliers,partners,filtered_partners"},
+            **self.DEFAULT_HEADERS,
+        )
+        self.assertEqual(response_1.status_code, status.HTTP_200_OK, response_1.json())
+        self.assertIsInstance(response_1.json(), dict)
+        self.assertListEqual(
+            ["products", "categories", "suppliers", "filtered_suppliers", "partners", "filtered_partners"],
+            list(response_1.json().keys()),
+        )
+        # check filtered_suppliers and filtered_partners are different from suppliers and partners!
+        supplier_names = {partner["name"] for partner in response_1.json()["suppliers"]}
+        self.assertSetEqual({"Supplier1", "Supplier2", "Supplier3", "Supplier4"}, supplier_names)
+
+        filtered_supplier_names = {partner["name"] for partner in response_1.json()["filtered_suppliers"]}
+        self.assertSetEqual({"Supplier2", "Supplier4"}, filtered_supplier_names)
+
+        partner_names = {partner["name"] for partner in response_1.json()["partners"]}
+        self.assertSetEqual({"Partner1", "Partner2", "Partner3", "Partner4"}, partner_names)
+
+        filtered_partner_names = {partner["name"] for partner in response_1.json()["filtered_partners"]}
+        self.assertSetEqual({"Partner2", "Partner4"}, filtered_partner_names)
+
+    def test_sideloading_with_filtered_prefetch(self):
+        response_1 = self.client.get(
+            path=reverse("product-list"),
+            data={"sideload": "filtered_suppliers,filtered_partners"},
+            **self.DEFAULT_HEADERS,
+        )
+        self.assertEqual(response_1.status_code, status.HTTP_200_OK, response_1.json())
+        self.assertIsInstance(response_1.json(), dict)
+        self.assertListEqual(
+            ["products", "filtered_suppliers", "filtered_partners"],
+            list(response_1.json().keys()),
+        )
+        filtered_supplier_names = {partner["name"] for partner in response_1.json()["filtered_suppliers"]}
+        self.assertSetEqual({"Supplier2", "Supplier4"}, filtered_supplier_names)
+
+        filtered_partner_names = {partner["name"] for partner in response_1.json()["filtered_partners"]}
+        self.assertSetEqual({"Partner2", "Partner4"}, filtered_partner_names)
+
+    def test_sideloading_with_filtered_prefetches(self):
+        response_1 = self.client.get(
+            path=reverse("product-list"),
+            data={"sideload": "categories,filtered_suppliers,filtered_suppliers2,filtered_partners"},
+            **self.DEFAULT_HEADERS,
+        )
+        self.assertEqual(response_1.status_code, status.HTTP_200_OK, response_1.json())
+        self.assertIsInstance(response_1.json(), dict)
+        self.assertListEqual(
+            ["products", "categories", "filtered_suppliers", "filtered_suppliers2", "filtered_partners"],
+            list(response_1.json().keys()),
+        )
+        # check filtered_suppliers and filtered_partners are different from suppliers and partners!
+
+        filtered_supplier_names = {supplier["name"] for supplier in response_1.json()["filtered_suppliers"]}
+        self.assertSetEqual({"Supplier2", "Supplier4"}, filtered_supplier_names)
+
+        filtered_supplier_names = {supplier["name"] for supplier in response_1.json()["filtered_suppliers2"]}
+        self.assertSetEqual({"Supplier3"}, filtered_supplier_names)
+
+        filtered_partner_names = {partner["name"] for partner in response_1.json()["filtered_partners"]}
+        self.assertSetEqual({"Partner2", "Partner4"}, filtered_partner_names)
+
+    def test_sideloading_combined_suppliers_with_filtered_prefetches(self):
+        response_1 = self.client.get(
+            path=reverse("product-list"),
+            data={"sideload": "categories,filtered_suppliers,filtered_partners"},
+            **self.DEFAULT_HEADERS,
+        )
+        self.assertEqual(response_1.status_code, status.HTTP_200_OK, response_1.json())
+        self.assertIsInstance(response_1.json(), dict)
+        self.assertListEqual(
+            ["products", "categories", "filtered_suppliers", "filtered_partners"],
+            list(response_1.json().keys()),
+        )
+        # check filtered_suppliers and filtered_partners are different from suppliers and partners!
+
+        filtered_supplier_names = {partner["name"] for partner in response_1.json()["filtered_suppliers"]}
+        self.assertSetEqual({"Supplier2", "Supplier4"}, filtered_supplier_names)
+
+        filtered_partner_names = {partner["name"] for partner in response_1.json()["filtered_partners"]}
+        self.assertSetEqual({"Partner2", "Partner4"}, filtered_partner_names)
 
 
 class TestDrfSideloadingInvalidPrefetchSource(BaseTestCase):
@@ -777,15 +772,17 @@ class TestDrfSideloadingValidPrefetchObjectsImplicit(BaseTestCase):
 
         ProductViewSet.sideloading_serializer_class = TempProductSideloadableSerializer
 
-    # TODO: fix test as we get an error: "Two different prefetches for the same attribute"
-    # def test_sideloading_with_prefetch_object_without_to_attr(self):
-    #     msg = f"Either source or prefetches must be set for sideloadable field 'partners'"
-    #     with self.assertRaisesMessage(ValueError, msg):
-    #         self.client.get(
-    #             path=reverse("product-list"),
-    #             data={"sideload": "categories,suppliers,filtered_suppliers,partners"},
-    #             **self.DEFAULT_HEADERS,
-    #         )
+    def test_sideloading_with_prefetch_object_without_to_attr(self):
+        msg = (
+            "Can't add filtered Prefetch 'supplier'. Existing prefetch does not have filters. "
+            "APIView might have an unfiltered prefetch_related that sideloading is trying to filter."
+        )
+        with self.assertRaisesMessage(ValueError, msg):
+            self.client.get(
+                path=reverse("product-list"),
+                data={"sideload": "categories,suppliers,filtered_suppliers,partners"},
+                **self.DEFAULT_HEADERS,
+            )
 
 
 class TestDrfSideloadingPrefetchObjectsMatchingLookup(BaseTestCase):
@@ -830,9 +827,8 @@ class TestDrfSideloadingPrefetchObjectsMatchingLookup(BaseTestCase):
             list(response_1.json().keys()),
         )
         # check filtered_suppliers and filtered_partners are different from suppliers and partners!
-        # partner_names = {partner["name"] for partner in response_1.json()["partners"]}
-        # FIXME: the Prefetch does not filter the queryset as expected!
-        # self.assertSetEqual({"Partner2", "Partner4"}, partner_names)
+        partner_names = {partner["name"] for partner in response_1.json()["partners"]}
+        self.assertSetEqual({"Partner2", "Partner4"}, partner_names)
 
 
 class TestDrfSideloadingInvalidPrefetchObject(BaseTestCase):
@@ -873,15 +869,18 @@ class TestDrfSideloadingInvalidPrefetchObject(BaseTestCase):
 
         ProductViewSet.sideloading_serializer_class = TempProductSideloadableSerializer
 
-    # # TODO: fix this for cases where field source is present but Prefetch.to_attr mismatches
-    # def test_sideloading_with_prefetches(self):
-    #     msg = f"Either source or prefetches must be set for sideloadable field 'partners'"
-    #     with self.assertRaisesMessage(ValueError, msg):
-    #         self.client.get(
-    #             path=reverse("product-list"),
-    #             data={"sideload": "categories,suppliers,filtered_suppliers,partners"},
-    #             **self.DEFAULT_HEADERS,
-    #         )
+    def test_sideloading_with_prefetches(self):
+        # cases where field source is present but Prefetch.to_attr mismatches
+        msg = (
+            "Sideloadable field 'filtered_suppliers' Prefetch 'to_attr' can't be different from source defined. "
+            "Tip: Remove source from field serializer."
+        )
+        with self.assertRaisesMessage(ValueError, msg):
+            self.client.get(
+                path=reverse("product-list"),
+                data={"sideload": "categories,suppliers,filtered_suppliers,partners"},
+                **self.DEFAULT_HEADERS,
+            )
 
 
 class TestDrfSideloadingWithoutListModelMixin(BaseTestCase):
