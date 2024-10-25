@@ -1,21 +1,15 @@
 # Changelog
 
-
 ## 2.2.0 (2024-10-22)
 - Support for Django 5
   - Django supported versions `5.0 -> 5.1`
   - Python supported versions `3.10 -> 3.12`
   - Django-rest-framework supported versions. `3.15`
-
-## 2.1.2 (2024-01-??)
-
 - Add support for request dependant prefetch filtering
 - refactored code for better readability
-- prefetches from view are also used when determining sideloading prefetches 
-
-## 2.1.1 (2024-01-??)
-
+- prefetches from view are also used when determining sideloading prefetches
 - Add support for drf_spectacular documentation
+- Add prefetch related support for multi source fields
 
 ## 2.1.0 (2024-01-26)
 
@@ -24,7 +18,6 @@
   - Python supported versions `3.10 -> 3.11`
   - Django-rest-framework supported versions. `3.13 -> 3.14`
 - Fix issue with prefetch ordering
-- Add prefetch related support for multi source fields
 
 ## 2.0.1 (2021-12-16)
 
