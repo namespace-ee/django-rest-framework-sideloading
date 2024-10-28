@@ -245,7 +245,10 @@ class SideloadableRelationsMixin(object):
                 elif isinstance(descriptor, ReverseOneToOneDescriptor):
                     model = descriptor.related.related_model
                 elif isinstance(descriptor, ReverseManyToOneDescriptor):
-                    model = descriptor.field.model
+                    if getattr(descriptor, "through", None):
+                        model = descriptor.field.related_model
+                    else:
+                        model = descriptor.field.model
                 else:
                     raise NotImplementedError(f"Descriptor {descriptor.__class__.__name__} has not been implemented")
             return model.objects.all()

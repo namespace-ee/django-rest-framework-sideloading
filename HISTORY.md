@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.2.1 (2024-10-28)
+- fix ReverseManyToOne through prefetch model selection
+
 ## 2.2.0 (2024-10-22)
 - Support for Django 5
   - Django supported versions `5.0 -> 5.1`
