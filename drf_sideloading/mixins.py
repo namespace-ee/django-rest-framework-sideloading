@@ -245,7 +245,9 @@ class SideloadableRelationsMixin(object):
                 elif isinstance(descriptor, ReverseOneToOneDescriptor):
                     model = descriptor.related.related_model
                 elif isinstance(descriptor, ReverseManyToOneDescriptor):
-                    if getattr(descriptor, "through", None):
+                    if getattr(descriptor, "reverse", None):
+                        model = descriptor.field.model
+                    elif getattr(descriptor, "through", None):
                         model = descriptor.field.related_model
                     else:
                         model = descriptor.field.model

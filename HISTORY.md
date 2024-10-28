@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.2.2 (2024-10-28)
+- fix ReverseManyToOne reverse prefetch model selection
+
 ## 2.2.1 (2024-10-28)
 - fix ReverseManyToOne through prefetch model selection
 
