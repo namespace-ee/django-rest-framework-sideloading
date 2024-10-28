@@ -1,13 +1,21 @@
 from rest_framework import serializers
 
 from drf_sideloading.serializers import SideLoadableSerializer
-from tests.models import Supplier, Category, Product, Partner
+from tests.models import Supplier, Category, Product, Partner, ProductMetadata, SupplierMetadata
+
+
+class SupplierMetadataSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SupplierMetadata
+        fields = ["supplier", "properties"]
 
 
 class SupplierSerializer(serializers.ModelSerializer):
+    metadata = SupplierMetadataSerializer(read_only=True)
+
     class Meta:
         model = Supplier
-        fields = ["name"]
+        fields = ["name", "metadata"]
 
 
 class PartnerSerializer(serializers.ModelSerializer):
@@ -22,10 +30,18 @@ class CategorySerializer(serializers.ModelSerializer):
         fields = ["name"]
 
 
+class ProductMetadataSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductMetadata
+        fields = ["product", "properties"]
+
+
 class ProductSerializer(serializers.ModelSerializer):
+    metadata = ProductMetadataSerializer(read_only=True)
+
     class Meta:
         model = Product
-        fields = ["name", "category", "supplier", "partners"]
+        fields = ["name", "category", "supplier", "partners", "metadata"]
 
 
 class CategorySideloadableSerializer(SideLoadableSerializer):
@@ -50,20 +66,22 @@ class ProductSideloadableSerializer(SideLoadableSerializer):
     backup_suppliers = SupplierSerializer(source="backup_supplier", many=True)
     partners = PartnerSerializer(source="partner", many=True)
     combined_suppliers = SupplierSerializer(many=True)
+    metadata = ProductMetadataSerializer(many=True, read_only=True)
 
     class Meta:
         primary = "products"
         prefetches = {
             "categories": "category",
-            "main_suppliers": "supplier",
-            "backup_suppliers": "backup_supplier",
+            "main_suppliers": ["supplier", "supplier__metadata"],
+            "backup_suppliers": ["backup_supplier", "backup_supplier__metadata"],
             "partners": "partners",
             # These can be defined to always load them, else they will be
             # copied over form all sources or selected sources only.
             "combined_suppliers": {
-                "suppliers": ["supplier"],
-                "backup_supplier": ["backup_supplier"],
+                "suppliers": ["supplier", "supplier__metadata"],
+                "backup_supplier": ["backup_supplier", "backup_supplier__metadata"],
             },
+            "metadata": "metadata",
         }
 
 
@@ -74,18 +92,20 @@ class NewProductSideloadableSerializer(SideLoadableSerializer):
     new_backup_suppliers = SupplierSerializer(source="backup_supplier", many=True)
     new_partners = PartnerSerializer(source="partner", many=True)
     combined_suppliers = SupplierSerializer(many=True)
+    metadata = ProductMetadataSerializer(many=True, read_only=True)
 
     class Meta:
         primary = "products"
         prefetches = {
             "new_categories": "category",
-            "new_main_suppliers": "supplier",
-            "new_backup_suppliers": "backup_supplier",
+            "new_main_suppliers": ["supplier", "supplier__metadata"],
+            "new_backup_suppliers": ["backup_supplier", "backup_supplier__metadata"],
             "new_partners": "partners",
             # These can be defined to always load them, else they will be
             # copied over form all sources or selected sources only.
             "combined_suppliers": {
-                "suppliers": ["supplier"],
-                "backup_supplier": ["backup_supplier"],
+                "suppliers": ["supplier", "supplier__metadata"],
+                "backup_supplier": ["backup_supplier", "backup_supplier__metadata"],
             },
+            "metadata": "metadata",
         }

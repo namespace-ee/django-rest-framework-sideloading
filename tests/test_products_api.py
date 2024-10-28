@@ -7,12 +7,13 @@ from rest_framework.renderers import BrowsableAPIRenderer, JSONRenderer
 from rest_framework.settings import api_settings
 
 from drf_sideloading.serializers import SideLoadableSerializer
-from tests.models import Category, Supplier, Product, Partner
+from tests.models import Category, Supplier, Product, Partner, ProductMetadata, SupplierMetadata
 from tests.serializers import (
     ProductSerializer,
     CategorySerializer,
     SupplierSerializer,
     PartnerSerializer,
+    ProductMetadataSerializer,
 )
 from tests.viewsets import ProductViewSet
 
@@ -32,27 +33,45 @@ class BaseTestCase(TestCase):
     def setUp(self):
         self.category = Category.objects.create(name="Category")
         self.supplier1 = Supplier.objects.create(name="Supplier1")
+        self.supplier_metadata_1 = SupplierMetadata.objects.create(
+            supplier=self.supplier1, properties="Supplier1 metadata"
+        )
         self.supplier2 = Supplier.objects.create(name="Supplier2")
+        self.supplier_metadata_2 = SupplierMetadata.objects.create(
+            supplier=self.supplier2, properties="Supplier2 metadata"
+        )
         self.supplier3 = Supplier.objects.create(name="Supplier3")
+        self.supplier_metadata_3 = SupplierMetadata.objects.create(
+            supplier=self.supplier3, properties="Supplier3 metadata"
+        )
         self.supplier4 = Supplier.objects.create(name="Supplier4")
+        self.supplier_metadata_4 = SupplierMetadata.objects.create(
+            supplier=self.supplier4, properties="Supplier4 metadata"
+        )
         self.partner1 = Partner.objects.create(name="Partner1")
         self.partner2 = Partner.objects.create(name="Partner2")
         self.partner3 = Partner.objects.create(name="Partner3")
         self.partner4 = Partner.objects.create(name="Partner4")
 
         self.product1 = Product.objects.create(name="Product1", category=self.category, supplier=self.supplier1)
+        self.product1_metadata = ProductMetadata.objects.create(product=self.product1, properties="value 1")
         self.product1.partners.add(self.partner1)
         self.product1.partners.add(self.partner2)
         self.product1.partners.add(self.partner4)
         self.product1.save()
 
         self.product2 = Product.objects.create(name="Product2", category=self.category, supplier=self.supplier2)
-        self.product1.partners.add(self.partner2)
-        self.product1.save()
+        self.product2_metadata = ProductMetadata.objects.create(product=self.product2, properties="value 2")
+        self.product2.partners.add(self.partner2)
+        self.product2.save()
+
         self.product3 = Product.objects.create(name="Product3", category=self.category, supplier=self.supplier3)
-        self.product1.partners.add(self.partner3)
-        self.product1.save()
+        self.product3_metadata = ProductMetadata.objects.create(product=self.product3, properties="value 3")
+        self.product3.partners.add(self.partner3)
+        self.product3.save()
+
         self.product4 = Product.objects.create(name="Product4", category=self.category, supplier=self.supplier4)
+        self.product4_metadata = ProductMetadata.objects.create(product=self.product4, properties="value 4")
 
 
 ###################################
@@ -68,13 +87,16 @@ class ProductSideloadTestCase(BaseTestCase):
             categories = CategorySerializer(source="category", many=True)
             suppliers = SupplierSerializer(source="supplier", many=True)
             partners = PartnerSerializer(many=True)
+            partners = PartnerSerializer(many=True)
+            metadata = ProductMetadataSerializer(many=True)
 
             class Meta:
                 primary = "products"
                 prefetches = {
                     "categories": "category",
-                    "suppliers": "supplier",
+                    "suppliers": ["supplier", "supplier__metadata"],
                     "partners": "partners",
+                    "metadata": "metadata",
                 }
 
         ProductViewSet.sideloading_serializer_class = TempProductSideloadableSerializer
@@ -89,11 +111,39 @@ class ProductSideloadTestCase(BaseTestCase):
     def test_list_sideloading(self):
         """Test sideloading for all defined relations"""
         response = self.client.get(
-            path=reverse("product-list"), data={"sideload": "categories,suppliers,partners"}, **self.DEFAULT_HEADERS
+            path=reverse("product-list"),
+            data={"sideload": "categories,suppliers,partners,metadata"},
+            **self.DEFAULT_HEADERS,
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.json())
         self.assertIsInstance(response.json(), dict)
-        self.assertListEqual(["products", "categories", "suppliers", "partners"], list(response.json().keys()))
+        self.assertListEqual(
+            ["products", "categories", "suppliers", "partners", "metadata"], list(response.json().keys())
+        )
+
+    def test_list_sideloading_with_direct_missing_one_to_one_relation(self):
+        """Test sideloading for all defined relations"""
+        ProductMetadata.objects.all().delete()
+        response = self.client.get(
+            path=reverse("product-list"),
+            data={"sideload": "metadata"},
+            **self.DEFAULT_HEADERS,
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.json())
+        self.assertIsInstance(response.json(), dict)
+        self.assertListEqual(["products", "metadata"], list(response.json().keys()))
+
+    def test_list_sideloading_with_indirect_missing_one_to_one_relation(self):
+        """Test sideloading for all defined relations"""
+        SupplierMetadata.objects.all().delete()
+        response = self.client.get(
+            path=reverse("product-list"),
+            data={"sideload": "suppliers"},
+            **self.DEFAULT_HEADERS,
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.json())
+        self.assertIsInstance(response.json(), dict)
+        self.assertListEqual(["products", "suppliers"], list(response.json().keys()))
 
     def test_list_partial_sideloading(self):
         """Test sideloading for selected relations"""
@@ -108,21 +158,47 @@ class ProductSideloadTestCase(BaseTestCase):
         response = self.client.get(path=reverse("product-detail", args=[self.product1.id]), **self.DEFAULT_HEADERS)
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.json())
         self.assertIsInstance(response.json(), dict)
-        self.assertListEqual(["name", "category", "supplier", "partners"], list(response.json().keys()))
+        self.assertListEqual(["name", "category", "supplier", "partners", "metadata"], list(response.json().keys()))
         # TODO: check details
 
     def test_detail_sideloading(self):
         """Test sideloading for all defined relations in detail view"""
         response = self.client.get(
             path=reverse("product-detail", args=[self.product1.id]),
-            data={"sideload": "categories,suppliers,partners"},
+            data={"sideload": "categories,suppliers,partners,metadata"},
             **self.DEFAULT_HEADERS,
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.json())
         self.assertIsInstance(response.json(), dict)
-        self.assertListEqual(["products", "categories", "suppliers", "partners"], list(response.json().keys()))
+        self.assertListEqual(
+            ["products", "categories", "suppliers", "partners", "metadata"], list(response.json().keys())
+        )
         self.assertEqual(1, len(response.json().get("products")))
         # TODO: check details
+
+    def test_detail_sideloading_with_direct_missing_one_to_one_relation(self):
+        """Test sideloading for all defined relations"""
+        ProductMetadata.objects.all().delete()
+        response = self.client.get(
+            path=reverse("product-detail", args=[self.product1.id]),
+            data={"sideload": "metadata"},
+            **self.DEFAULT_HEADERS,
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.json())
+        self.assertIsInstance(response.json(), dict)
+        self.assertListEqual(["products", "metadata"], list(response.json().keys()))
+
+    def test_detail_sideloading_with_indirect_missing_one_to_one_relation(self):
+        """Test sideloading for all defined relations"""
+        SupplierMetadata.objects.all().delete()
+        response = self.client.get(
+            path=reverse("product-detail", args=[self.product1.id]),
+            data={"sideload": "suppliers"},
+            **self.DEFAULT_HEADERS,
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.json())
+        self.assertIsInstance(response.json(), dict)
+        self.assertListEqual(["products", "suppliers"], list(response.json().keys()))
 
     def test_detail_partial_sideloading(self):
         """Test sideloading for selected relations in detail view"""
@@ -940,7 +1016,7 @@ class TestDrfSideloadingListModelMixinAfterSideloading(BaseTestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.json())
         self.assertIsInstance(response.json(), dict)
-        self.assertListEqual(["name", "category", "supplier", "partners"], list(response.json().keys()))
+        self.assertListEqual(["name", "category", "supplier", "partners", "metadata"], list(response.json().keys()))
 
 
 class TestDrfSideloadingBrowsableApiPermissions(BaseTestCase):
@@ -1009,7 +1085,7 @@ class TestDrfSideloadingBrowsableApiPermissions(BaseTestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(isinstance(response.json(), dict))
-        self.assertListEqual(["name", "category", "supplier", "partners"], list(response.json().keys()))
+        self.assertListEqual(["name", "category", "supplier", "partners", "metadata"], list(response.json().keys()))
 
     def test_sideloading_allow_post_with_sideloading(self):
         # TODO: check response with new detail view sideloading logic!
@@ -1029,7 +1105,7 @@ class TestDrfSideloadingBrowsableApiPermissions(BaseTestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(isinstance(response.json(), dict))
-        self.assertListEqual(["name", "category", "supplier", "partners"], list(response.json().keys()))
+        self.assertListEqual(["name", "category", "supplier", "partners", "metadata"], list(response.json().keys()))
 
 
 class ProductSideloadSameSourceDuplicationTestCase(BaseTestCase):

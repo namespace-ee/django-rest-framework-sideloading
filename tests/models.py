@@ -9,6 +9,11 @@ class Supplier(models.Model):
     name = models.CharField(max_length=255)
 
 
+class SupplierMetadata(models.Model):
+    supplier = models.OneToOneField(Supplier, related_name="metadata", on_delete=models.CASCADE)
+    properties = models.CharField(max_length=255)
+
+
 class Partner(models.Model):
     name = models.CharField(max_length=255)
 
@@ -21,3 +26,8 @@ class Product(models.Model):
         Supplier, related_name="backup_products", on_delete=models.CASCADE, null=True, blank=True
     )
     partners = models.ManyToManyField(Partner, related_name="products", blank=True)
+
+
+class ProductMetadata(models.Model):
+    product = models.OneToOneField(Product, related_name="metadata", on_delete=models.CASCADE)
+    properties = models.CharField(max_length=255)
