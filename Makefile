@@ -46,12 +46,5 @@ coverage: ## check code coverage quickly with the default Python
 	open htmlcov/index.html
 
 release: clean ## package and upload a release
-	python setup.py bdist_wheel
+	python setup.py sdist bdist_wheel
 	twine upload dist/*
-
-sdist: clean ## package
-	python setup.py sdist
-	ls -l dist
-
-bump: ## bump next version + by 0.0.1 patch
-	bumpversion minor
