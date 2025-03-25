@@ -4,6 +4,7 @@ import re
 from itertools import chain
 from typing import Dict, Optional, Union, Set, List
 
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import models
 from django.db.models import Prefetch
 from django.db.models.fields.related_descriptors import (
@@ -13,6 +14,7 @@ from django.db.models.fields.related_descriptors import (
     ReverseManyToOneDescriptor,
 )
 from django.db.models.sql.where import WhereNode, AND
+from django.http import Http404
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404
@@ -488,7 +490,10 @@ class SideloadableRelationsMixin(object):
         )
 
         filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
-        queryset = queryset.filter(**filter_kwargs)
+        try:
+            queryset = queryset.filter(**filter_kwargs)
+        except (TypeError, ValueError, DjangoValidationError):
+            raise Http404
 
         # check single object fetched
         obj = get_object_or_404(queryset)
