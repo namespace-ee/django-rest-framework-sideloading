@@ -3,17 +3,9 @@
 This is very simple django application using django rest framework
 to demonstrate example use ceses and test the `drf_sideloading` library.
 
-This version requires python3
-
-## Export PYTHONPATH
-
-To use latest version of cloned library export parent directory
-
-    export PYTHONPATH=$PYTHONPATH:$(cd .. && pwd)
-
-Or install desired release using pip
-
-    pip install drf-sideloading==0.1.7
+The example is a [uv](https://docs.astral.sh/uv/) project and always runs against
+the working copy of the library in the parent directory, so there is no need to
+export `PYTHONPATH` or install a release from PyPI.
 
 ## setup using script
 
@@ -29,4 +21,4 @@ Visit browser:
 
 Test sideloading products endpoint
 
-    http://127.0.0.1:8000/product/?sideload=category,supplier,partner
+    http://127.0.0.1:8000/products/?sideload=categories,suppliers,partners

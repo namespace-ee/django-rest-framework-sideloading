@@ -1,12 +1,12 @@
 from typing import Dict, Union
-from django.utils.translation import gettext_lazy as _
 
+from django.utils.translation import gettext_lazy as _
+from drf_spectacular.openapi import AutoSchema
 from drf_spectacular.utils import (
-    OpenApiParameter,
     OpenApiExample,
+    OpenApiParameter,
     OpenApiTypes,
 )
-from drf_spectacular.openapi import AutoSchema
 
 
 class SideloadingAutoSchema(AutoSchema):

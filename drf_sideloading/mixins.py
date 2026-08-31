@@ -2,7 +2,7 @@ import copy
 import importlib
 import re
 from itertools import chain
-from typing import Dict, Optional, Union, Set, List
+from typing import Dict, List, Optional, Set, Union
 
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import models
@@ -10,20 +10,19 @@ from django.db.models import Prefetch
 from django.db.models.fields.related_descriptors import (
     ForwardManyToOneDescriptor,
     ForwardOneToOneDescriptor,
-    ReverseOneToOneDescriptor,
     ReverseManyToOneDescriptor,
+    ReverseOneToOneDescriptor,
 )
-from django.db.models.sql.where import WhereNode, AND
+from django.db.models.sql.where import AND, WhereNode
 from django.http import Http404
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404
-from rest_framework.mixins import RetrieveModelMixin, ListModelMixin
+from rest_framework.mixins import ListModelMixin, RetrieveModelMixin
 from rest_framework.response import Response
 from rest_framework.serializers import ListSerializer
 
 from drf_sideloading.serializers import SideLoadableSerializer
-
 
 RELATION_DESCRIPTORS = [
     ForwardManyToOneDescriptor,

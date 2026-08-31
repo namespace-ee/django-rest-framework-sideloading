@@ -15,16 +15,15 @@ Including another URLconf
 """
 
 from django.conf import settings
-from django.urls import path, include
 from django.contrib import admin
-from rest_framework import routers
-
+from django.urls import include, path
 from products.views import (
-    ProductViewSet,
     CategoryViewSet,
-    SupplierViewSet,
     PartnerViewSet,
+    ProductViewSet,
+    SupplierViewSet,
 )
+from rest_framework import routers
 
 router = routers.DefaultRouter()
 router.register(r"products", ProductViewSet)
