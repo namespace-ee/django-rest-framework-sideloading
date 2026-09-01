@@ -28,7 +28,7 @@ jobs:
         run: uv run ruff format --check .
 
   test:
-    name: Test (Python ${{ matrix.version.python }}, Django ${{ matrix.version.django }}, ${{ matrix.extras.name }})
+    name: Test (Python ${{ matrix.version.python }}, Django ${{ matrix.version.django }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -48,9 +48,6 @@ jobs:
           - { python: "3.12", django: "6.1" }
           - { python: "3.13", django: "6.1" }
           - { python: "3.14", django: "6.1" }
-        extras:
-          - { name: "no extras", flag: "" }
-          - { name: "all extras", flag: "--all-extras" }
 
     steps:
       - uses: actions/checkout@v6
@@ -64,7 +61,7 @@ jobs:
         run: uv python install ${{ matrix.version.python }}
 
       - name: Test
-        run: uv run --python ${{ matrix.version.python }} --with 'Django>=${{ matrix.version.django }},<${{ matrix.version.django }}.99' ${{ matrix.extras.flag }} pytest tests/ -v
+        run: uv run --python ${{ matrix.version.python }} --all-extras --with 'Django>=${{ matrix.version.django }},<${{ matrix.version.django }}.99' pytest tests/ -v
 
   build:
     name: Build package
