@@ -29,6 +29,13 @@ DRF-sideloading is an extension to provide side-loading functionality of related
     pip install drf-sideloading
     ```
 
+    OpenAPI schema generation is optional. Install the `spectacular` extra to have the
+    `sideload` query parameter documented by [drf-spectacular](https://github.com/tfranzel/drf-spectacular):
+
+    ```shell
+    pip install "drf-sideloading[spectacular]"
+    ```
+
 2. Import `SideloadableRelationsMixin`:
 
     ```python

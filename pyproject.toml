@@ -32,6 +32,10 @@ dependencies = [
     "djangorestframework>=3.16",
 ]
 
+[project.optional-dependencies]
+# OpenAPI schema generation; the library works without it.
+spectacular = ["drf-spectacular>=0.28"]
+
 [project.urls]
 Homepage = "https://github.com/namespace-ee/django-rest-framework-sideloading"
 Changelog = "https://github.com/namespace-ee/django-rest-framework-sideloading/blob/main/HISTORY.md"

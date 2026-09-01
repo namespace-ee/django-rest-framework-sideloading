@@ -1,5 +1,5 @@
 import copy
-import importlib
+import importlib.util
 import re
 from itertools import chain
 from typing import Dict, List, Optional, Set, Union
