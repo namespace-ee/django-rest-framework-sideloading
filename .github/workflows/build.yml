@@ -28,37 +28,29 @@ jobs:
         run: uv run ruff format --check .
 
   test:
-    name: Test (Python ${{ matrix.python-version }}, Django ${{ matrix.django-version }})
+    name: Test (Python ${{ matrix.version.python }}, Django ${{ matrix.version.django }}, ${{ matrix.extras.name }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        include:
+        version:
           # Django 5.2 LTS - Python 3.10 … 3.14
-          - python-version: "3.10"
-            django-version: "5.2"
-          - python-version: "3.11"
-            django-version: "5.2"
-          - python-version: "3.12"
-            django-version: "5.2"
-          - python-version: "3.13"
-            django-version: "5.2"
-          - python-version: "3.14"
-            django-version: "5.2"
+          - { python: "3.10", django: "5.2" }
+          - { python: "3.11", django: "5.2" }
+          - { python: "3.12", django: "5.2" }
+          - { python: "3.13", django: "5.2" }
+          - { python: "3.14", django: "5.2" }
           # Django 6.0 - Python 3.12, 3.13, 3.14
-          - python-version: "3.12"
-            django-version: "6.0"
-          - python-version: "3.13"
-            django-version: "6.0"
-          - python-version: "3.14"
-            django-version: "6.0"
+          - { python: "3.12", django: "6.0" }
+          - { python: "3.13", django: "6.0" }
+          - { python: "3.14", django: "6.0" }
           # Django 6.1 - Python 3.12, 3.13, 3.14
-          - python-version: "3.12"
-            django-version: "6.1"
-          - python-version: "3.13"
-            django-version: "6.1"
-          - python-version: "3.14"
-            django-version: "6.1"
+          - { python: "3.12", django: "6.1" }
+          - { python: "3.13", django: "6.1" }
+          - { python: "3.14", django: "6.1" }
+        extras:
+          - { name: "no extras", flag: "" }
+          - { name: "all extras", flag: "--all-extras" }
 
     steps:
       - uses: actions/checkout@v6
@@ -68,11 +60,11 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Set up Python ${{ matrix.python-version }}
-        run: uv python install ${{ matrix.python-version }}
+      - name: Set up Python ${{ matrix.version.python }}
+        run: uv python install ${{ matrix.version.python }}
 
       - name: Test
-        run: uv run --python ${{ matrix.python-version }} --with 'Django>=${{ matrix.django-version }},<${{ matrix.django-version }}.99' pytest tests/ -v
+        run: uv run --python ${{ matrix.version.python }} --with 'Django>=${{ matrix.version.django }},<${{ matrix.version.django }}.99' ${{ matrix.extras.flag }} pytest tests/ -v
 
   build:
     name: Build package
