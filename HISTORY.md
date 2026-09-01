@@ -17,6 +17,9 @@
   - it was imported by `drf_sideloading.schema` without being declared anywhere
   - the library detects it at import time and works with or without it
 
+## 2.2.3 (2025-03-25)
+- fix handling of invalid lookup values in detail views, returning 404 instead of an unhandled error
+
 ## 2.2.2 (2024-10-28)
 - fix ReverseManyToOne reverse prefetch model selection
 
