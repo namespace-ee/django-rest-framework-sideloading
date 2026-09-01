@@ -14,7 +14,6 @@ Including another URLconf
     2. Add a URL to urlpatterns:  url(r'^blog/', include('blog.urls'))
 """
 
-from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
 from products.views import (
@@ -33,9 +32,3 @@ router.register(r"partners", PartnerViewSet)
 
 
 urlpatterns = [path("admin/", admin.site.urls), path("", include(router.urls))]
-
-
-if settings.DEBUG:
-    import debug_toolbar
-
-    urlpatterns = [path("__debug__/", include(debug_toolbar.urls))] + urlpatterns
