@@ -1,6 +1,6 @@
 [project]
 name = "drf-sideloading"
-version = "2.2.3"
+version = "2.3.0"
 description = "Extension for Django Rest Framework to enable simple sideloading"
 readme = "README.md"
 license = "MIT"
@@ -68,7 +68,7 @@ include = [
 ]
 
 [tool.bumpversion]
-current_version = "2.2.3"
+current_version = "2.3.0"
 commit = true
 tag = true
 
