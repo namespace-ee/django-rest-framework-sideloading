@@ -2,8 +2,7 @@
 
 set -e
 
-# Create the virtualenv and install the example project together with the
-# working copy of drf-sideloading. uv fetches Python itself if needed.
+# Install the example against the working copy of drf-sideloading
 uv sync
 
 # Run migrate
