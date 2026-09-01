@@ -1,10 +1,4 @@
- #!/bin/bash
-
-# Activate virtualenv
-source ./.env/bin/activate
-
-# Add drf-sideloading library to PYTHONPATH
-export PYTHONPATH=$PYTHONPATH:$(cd .. && pwd)
+#!/bin/bash
 
 # Start development server
-python manage.py runserver
+uv run python manage.py runserver

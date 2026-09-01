@@ -1,19 +1,19 @@
 from django.db.models import Prefetch
 from django.test import TestCase
 from django.urls import reverse
-from rest_framework import status, serializers
+from rest_framework import serializers, status
 from rest_framework.permissions import BasePermission
 from rest_framework.renderers import BrowsableAPIRenderer, JSONRenderer
 from rest_framework.settings import api_settings
 
 from drf_sideloading.serializers import SideLoadableSerializer
-from tests.models import Category, Supplier, Product, Partner, ProductMetadata, SupplierMetadata
+from tests.models import Category, Partner, Product, ProductMetadata, Supplier, SupplierMetadata
 from tests.serializers import (
-    ProductSerializer,
     CategorySerializer,
-    SupplierSerializer,
     PartnerSerializer,
     ProductMetadataSerializer,
+    ProductSerializer,
+    SupplierSerializer,
 )
 from tests.viewsets import ProductViewSet
 

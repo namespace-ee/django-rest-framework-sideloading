@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+- Migrate packaging and development tooling to [uv](https://docs.astral.sh/uv/)
+  - `pyproject.toml` is now the single source of project metadata and dependencies
+  - removed `setup.py`, `setup.cfg`, `MANIFEST.in`, `tox.ini`, `runtests.py` and the `requirements*.txt` files
+  - `hatchling` replaces `setuptools` as the build backend
+  - `ruff` replaces `black` and `flake8`
+  - `pytest` + `pytest-django` replace the hand-rolled `runtests.py` test runner
+  - tests, linting and PyPI publishing (trusted publishing) run on GitHub Actions instead of Travis CI
+- Narrow the supported versions to those still supported upstream
+  - Django `5.2 -> 6.1` (Django `2.2 -> 5.1` are all end-of-life)
+  - Python `3.10 -> 3.14` (Python `3.6 -> 3.9` are all end-of-life)
+  - Django REST framework `3.16+`
+- Declare `drf-spectacular` as an optional `spectacular` extra
+  - it was imported by `drf_sideloading.schema` without being declared anywhere
+  - the library detects it at import time and works with or without it
+
 ## 2.2.2 (2024-10-28)
 - fix ReverseManyToOne reverse prefetch model selection
 

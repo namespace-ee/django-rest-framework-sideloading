@@ -1,18 +1,18 @@
-from rest_framework import viewsets, filters, versioning
-from rest_framework.mixins import RetrieveModelMixin, ListModelMixin
+from rest_framework import filters, versioning, viewsets
+from rest_framework.mixins import ListModelMixin, RetrieveModelMixin
 from rest_framework.viewsets import GenericViewSet
 
 from drf_sideloading.mixins import SideloadableRelationsMixin
 from tests.mixins import OtherMixin
-from tests.models import Product, Category, Supplier, Partner
+from tests.models import Category, Partner, Product, Supplier
 from tests.serializers import (
-    ProductSerializer,
     CategorySerializer,
-    SupplierSerializer,
-    PartnerSerializer,
-    ProductSideloadableSerializer,
     CategorySideloadableSerializer,
     NewProductSideloadableSerializer,
+    PartnerSerializer,
+    ProductSerializer,
+    ProductSideloadableSerializer,
+    SupplierSerializer,
 )
 
 

@@ -1,12 +1,91 @@
-[tool.black]
-line-length = 120
-target-version = ["py37", "py38", "py39", "py310", "py311", "py312"]
-include = '\.pyi?$'
-exclude = '''
-/(
-    \.git
-  | build
-  | dist
+[project]
+name = "drf-sideloading"
+version = "2.2.3"
+description = "Extension for Django Rest Framework to enable simple sideloading"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+authors = [{ name = "Namespace OÜ", email = "info@namespace.ee" }]
+keywords = ["drf-sideloading", "django", "djangorestframework", "sideloading"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Web Environment",
+    "Framework :: Django",
+    "Framework :: Django :: 5.2",
+    "Framework :: Django :: 6.0",
+    "Framework :: Django :: 6.1",
+    "Intended Audience :: Developers",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "Django>=5.2",
+    "djangorestframework>=3.16",
+]
 
-)/
-'''
+[project.optional-dependencies]
+# OpenAPI schema generation; the library works without it.
+spectacular = ["drf-spectacular>=0.28"]
+
+[project.urls]
+Homepage = "https://github.com/namespace-ee/django-rest-framework-sideloading"
+Changelog = "https://github.com/namespace-ee/django-rest-framework-sideloading/blob/main/HISTORY.md"
+Issues = "https://github.com/namespace-ee/django-rest-framework-sideloading/issues"
+
+[dependency-groups]
+dev = [
+    "bump-my-version",
+    # to test conflicts with filtering
+    "django-filter",
+    "pytest",
+    "pytest-django",
+    "ruff",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["drf_sideloading"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/drf_sideloading",
+    "/tests",
+    "/AUTHORS.md",
+    "/HISTORY.md",
+    "/README.md",
+]
+
+[tool.bumpversion]
+current_version = "2.2.3"
+commit = true
+tag = true
+
+[[tool.bumpversion.files]]
+filename = "pyproject.toml"
+search = 'version = "{current_version}"'
+replace = 'version = "{new_version}"'
+
+[[tool.bumpversion.files]]
+filename = "drf_sideloading/__init__.py"
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "tests.settings"

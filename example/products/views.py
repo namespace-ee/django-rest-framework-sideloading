@@ -1,14 +1,15 @@
 from rest_framework import viewsets
 
 from drf_sideloading.mixins import SideloadableRelationsMixin
-from .models import Product, Category, Supplier, Partner
+
+from .models import Category, Partner, Product, Supplier
 from .serializers import (
-    ProductSerializer,
     CategorySerializer,
-    SupplierSerializer,
-    PartnerSerializer,
-    ProductSideloadableSerializer,
     CategorySideloadableSerializer,
+    PartnerSerializer,
+    ProductSerializer,
+    ProductSideloadableSerializer,
+    SupplierSerializer,
 )
 
 

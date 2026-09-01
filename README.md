@@ -1,12 +1,21 @@
 [![Package Index](https://badge.fury.io/py/drf-sideloading.svg)](https://badge.fury.io/py/drf-sideloading)
-[![Build Status](https://travis-ci.org/namespace-ee/django-rest-framework-sideloading.svg?branch=master)](https://travis-ci.org/namespace-ee/django-rest-framework-sideloading)
-[![Code Coverage](https://codecov.io/gh/namespace-ee/django-rest-framework-sideloading/branch/master/graph/badge.svg)](https://codecov.io/gh/namespace-ee/django-rest-framework-sideloading)
-[![License is MIT](https://img.shields.io/github/license/mashape/apistatus.svg?maxAge=2592000)](https://github.com/namespace-ee/drf-sideloading/blob/master/LICENSE)
-[![Code style Black](https://img.shields.io/badge/code%20style-black-000000.svg?maxAge=2592000)](https://github.com/ambv/black)
+[![CI](https://github.com/namespace-ee/django-rest-framework-sideloading/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/namespace-ee/django-rest-framework-sideloading/actions/workflows/build.yml)
+[![License is MIT](https://img.shields.io/github/license/mashape/apistatus.svg?maxAge=2592000)](https://github.com/namespace-ee/django-rest-framework-sideloading/blob/main/LICENSE)
+[![Code style Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 :warning: Note that there are major API changes since version 0.1.1 that have to be taken into account when upgrading!
 
 :warning: Python 2 and Django 1.11 are no longer supported from version 1.4.0!
+
+## Supported versions
+
+Only Django and Python versions that upstream still supports are tested and supported:
+
+| Django       | Python           | Django REST framework |
+| ------------ | ---------------- | --------------------- |
+| 5.2 LTS      | 3.10 – 3.14      | 3.16+                 |
+| 6.0          | 3.12 – 3.14      | 3.16+                 |
+| 6.1          | 3.12 – 3.14      | 3.16+                 |
 
 # Django rest framework sideloading
 
@@ -18,6 +27,13 @@ DRF-sideloading is an extension to provide side-loading functionality of related
 
     ```shell
     pip install drf-sideloading
+    ```
+
+    OpenAPI schema generation is optional. Install the `spectacular` extra to have the
+    `sideload` query parameter documented by [drf-spectacular](https://github.com/tfranzel/drf-spectacular):
+
+    ```shell
+    pip install "drf-sideloading[spectacular]"
     ```
 
 2. Import `SideloadableRelationsMixin`:
@@ -33,7 +49,8 @@ DRF-sideloading is an extension to provide side-loading functionality of related
 
     ```python
     from drf_sideloading.serializers import SideLoadableSerializer
-    
+
+
     class ProductSideloadableSerializer(SideLoadableSerializer):
         products = ProductSerializer(many=True)
         categories = CategorySerializer(source="category", many=True)
@@ -41,7 +58,7 @@ DRF-sideloading is an extension to provide side-loading functionality of related
         secondary_suppliers = SupplierSerializer(many=True)
         suppliers = SupplierSerializer(many=True)
         partners = PartnerSerializer(many=True)
-    
+
         class Meta:
             primary = "products"
             prefetches = {
@@ -68,13 +85,9 @@ DRF-sideloading is an extension to provide side-loading functionality of related
        "categories": "category",
        "primary_suppliers": ["primary_supplier", "primary_supplier__some_related_object"],
        "secondary_suppliers": Prefetch(
-           lookup="secondary_suppliers", 
-           queryset=Supplier.objects.prefetch_related("some_related_object")
+           lookup="secondary_suppliers", queryset=Supplier.objects.prefetch_related("some_related_object")
        ),
-       "partners": Prefetch(
-           lookup="partners", 
-           queryset=Partner.objects.select_related("some_related_object")
-       )
+       "partners": Prefetch(lookup="partners", queryset=Partner.objects.select_related("some_related_object")),
    }
    ```
 
@@ -87,10 +100,7 @@ DRF-sideloading is an extension to provide side-loading functionality of related
    prefetches = {
        "primary_suppliers": "primary_supplier",
        "secondary_suppliers": "secondary_suppliers",
-       "suppliers": {
-           "primary_suppliers": "primary_supplier",
-           "secondary_suppliers": "secondary_suppliers"
-       }
+       "suppliers": {"primary_suppliers": "primary_supplier", "secondary_suppliers": "secondary_suppliers"},
    }
    ```
 
@@ -102,22 +112,22 @@ DRF-sideloading is an extension to provide side-loading functionality of related
    Note that this prefetch noes not reuse `primary_supplier` and `secondary_suppliers` if **suppliers** and **primary_supplier** or **secondary_suppliers** are sideloaded at the same time.
    ```python
    from django.db.models import Prefetch
-   
+
    prefetches = {
        "categories": "category",
        "primary_suppliers": "primary_supplier",
        "secondary_suppliers": "secondary_suppliers",
        "suppliers": {
            "primary_suppliers": Prefetch(
-               lookup="secondary_suppliers", 
-               queryset=Supplier.objects.select_related("some_related_object"), 
-               to_attr="secondary_suppliers_with_preselected_relation"
+               lookup="secondary_suppliers",
+               queryset=Supplier.objects.select_related("some_related_object"),
+               to_attr="secondary_suppliers_with_preselected_relation",
            ),
            "secondary_suppliers": Prefetch(
-               lookup="secondary_suppliers", 
-               queryset=Supplier.objects.filter(created_at__gt=pendulum.now().subtract(days=10)).order_by("created_at"), 
-               to_attr="latest_secondary_suppliers"
-           )
+               lookup="secondary_suppliers",
+               queryset=Supplier.objects.filter(created_at__gt=pendulum.now().subtract(days=10)).order_by("created_at"),
+               to_attr="latest_secondary_suppliers",
+           ),
        },
    }
    ```
@@ -131,36 +141,37 @@ DRF-sideloading is an extension to provide side-loading functionality of related
 
     ```python
     from drf_sideloading.mixins import SideloadableRelationsMixin
-    
+
+
     class ProductViewSet(SideloadableRelationsMixin, viewsets.ModelViewSet):
         """
         A simple ViewSet for viewing and editing products.
         """
-    
+
         queryset = Product.objects.all()
         serializer_class = ProductSerializer
         sideloading_serializer_class = ProductSideloadableSerializer
-   
+
         def get_queryset(self):
-            # Add prefetches for the viewset as normal 
+            # Add prefetches for the viewset as normal
             return super().get_queryset().prefetch_related("created_by")
-   
+
         def get_sideloading_serializer_class(self, request=None):
-            # use a different sideloadable serializer for older version 
+            # use a different sideloadable serializer for older version
             if self.request.version < "1.0.0":
                 return OldProductSideloadableSerializer
             return super().get_sideloading_serializer_class(request=request)
-   
+
         def get_sideloading_serializer(self, *args, **kwargs):
             # if modifications are required to the serializer initialization this method can be used.
             return super().get_sideloading_serializer(*args, **kwargs)
-   
+
         def get_sideloading_serializer_context(self):
             # Extra context provided to the serializer class.
             return {"request": self.request, "format": self.format_kwarg, "view": self}
-      
+
         def add_sideloading_prefetch_filter(self, source, queryset, request):
-             # 
+            #
             if source == "model1__relation1":
                 return queryset.filter(is_active=True), True
             if hasattr(queryset, "readable"):
@@ -282,47 +293,53 @@ sh scripts/dev.sh
 
 Contributions are welcome, and they are greatly appreciated! Every little bit helps, and credit will always be given.
 
+This project uses [uv](https://docs.astral.sh/uv/) for dependency management and packaging.
+
 #### Setup for contribution
 
 ```shell
-source <YOURVIRTUALENV>/bin/activate
-(myenv) $ pip install -r requirements_dev.txt
+uv sync
 ```
+
+`uv` creates the virtualenv, installs the project with every development dependency from
+`uv.lock`, and downloads a suitable Python interpreter if one is missing. There is no
+`pip install` step and no virtualenv to activate — prefix commands with `uv run`.
 
 ### Test
 
 ```shell
-$ make test
+$ make test          # or: uv run pytest tests/
 ```
 
-#### Run tests with environment matrix
+#### Run tests against a specific Django version
 
 ```shell
-$ make tox
+$ uv run --python 3.12 --with 'Django>=6.0,<6.0.99' pytest tests/ -v
 ```
 
-#### Run tests with specific environment
+The full Python/Django matrix runs in CI on every pull request; see
+[`.github/workflows/build.yml`](.github/workflows/build.yml).
+
+#### Lint
 
 ```shell
-$ tox --listenvs
-py37-django22-drf39
-py38-django31-drf311
-py39-django32-drf312
-# ...
-$ tox -e py39-django32-drf312
+$ make lint          # ruff check + ruff format --check
+$ make format        # apply the fixes
 ```
 
-#### Test coverage
+#### Release
+
+Bump the version — this commits and tags — then push and publish a GitHub release. CI builds
+the distributions and uploads them to PyPI via trusted publishing.
 
 ```shell
-$ make coverage
+$ uv run bump-my-version bump patch  # or minor / major
+$ git push --follow-tags
 ```
-
-Use [pyenv](https://github.com/pyenv/pyenv) for testing using different python versions locally.
 
 ## License
 
-[MIT](https://github.com/namespace-ee/drf-sideloading/blob/master/LICENSE)
+[MIT](https://github.com/namespace-ee/django-rest-framework-sideloading/blob/main/LICENSE)
 
 ## Credits
 

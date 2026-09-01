@@ -1,7 +1,8 @@
 from rest_framework import serializers
 
 from drf_sideloading.serializers import SideLoadableSerializer
-from .models import Product, Category, Supplier, Partner
+
+from .models import Category, Partner, Product, Supplier
 
 
 class SupplierSerializer(serializers.ModelSerializer):
