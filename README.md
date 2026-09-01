@@ -3,10 +3,6 @@
 [![License is MIT](https://img.shields.io/github/license/mashape/apistatus.svg?maxAge=2592000)](https://github.com/namespace-ee/django-rest-framework-sideloading/blob/main/LICENSE)
 [![Code style Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
-:warning: Note that there are major API changes since version 0.1.1 that have to be taken into account when upgrading!
-
-:warning: Python 2 and Django 1.11 are no longer supported from version 1.4.0!
-
 ## Supported versions
 
 Only Django and Python versions that upstream still supports are tested and supported:
