@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.3.0 (2026-09-01)
 
 - Migrate packaging and development tooling to [uv](https://docs.astral.sh/uv/)
   - `pyproject.toml` is now the single source of project metadata and dependencies

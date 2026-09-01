@@ -53,7 +53,9 @@ dependencies = [
 requires-dist = [
     { name = "django", specifier = ">=5.2" },
     { name = "djangorestframework", specifier = ">=3.16" },
+    { name = "drf-spectacular", marker = "extra == 'spectacular'", specifier = ">=0.28" },
 ]
+provides-extras = ["spectacular"]
 
 [package.metadata.requires-dev]
 dev = [
