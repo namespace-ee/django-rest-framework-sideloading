@@ -26,6 +26,9 @@ class Product(models.Model):
         Supplier, related_name="backup_products", on_delete=models.CASCADE, null=True, blank=True
     )
     partners = models.ManyToManyField(Partner, related_name="products", blank=True)
+    # Non-relational copies of related pks, used to sideload without a Django relation.
+    legacy_supplier_id = models.IntegerField(null=True, blank=True)
+    partner_ids = models.JSONField(default=list, blank=True)
 
 
 class ProductMetadata(models.Model):

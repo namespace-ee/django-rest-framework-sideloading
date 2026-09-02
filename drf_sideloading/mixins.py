@@ -4,6 +4,7 @@ import re
 from itertools import chain
 from typing import Dict, List, Optional, Set, Union
 
+from django.core.exceptions import FieldDoesNotExist
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import models
 from django.db.models import Prefetch
@@ -186,9 +187,7 @@ class SideloadableRelationsMixin(object):
                         if len(invalid_sources) == 1:
                             msg = _(f"source {next(iter(invalid_sources))} is not defined for '{fieldname}'")
                         else:
-                            msg = _(
-                                f"sources {', '.join(sorted(invalid_sources))} are not defined for '{fieldname}'"
-                            )
+                            msg = _(f"sources {', '.join(sorted(invalid_sources))} are not defined for '{fieldname}'")
                         raise ValidationError({self.sideloading_query_param_name: [msg]})
             elif relations:
                 msg = _(f"'{fieldname}' is not a multi source field.")
@@ -387,6 +386,18 @@ class SideloadableRelationsMixin(object):
             source_model = field.child.Meta.model
             relation_key = field_source or relation
 
+            if self._relation_uses_non_relational_id_source(relation, source_keys):
+                related_ids = set()
+                sources = self.sideloadable_field_sources[relation]
+                if isinstance(sources, dict):
+                    for src_key, src in sources.items():
+                        if source_keys is None or src_key in source_keys:
+                            related_ids |= self._ids_from_queryset_lookup(queryset, src)
+                else:
+                    related_ids |= self._ids_from_queryset_lookup(queryset, sources)
+                sideloadable_page[relation_key] = self._load_sideloaded_by_pks(source_model, related_ids, relation)
+                continue
+
             related_ids = set()
             sideloadable_field_source = self.sideloadable_field_sources.get(relation)
             if isinstance(sideloadable_field_source, dict):
@@ -464,7 +475,7 @@ class SideloadableRelationsMixin(object):
                     related_objects=page, lookup=field_source or self.sideloadable_field_sources[relation]
                 )
 
-        return sideloadable_page
+        return self._resolve_non_relational_id_values(sideloadable_page, relations_to_sideload)
 
     def get_sideloadable_object_as_queryset(self, request, relations_to_sideload):
         """
@@ -526,6 +537,94 @@ class SideloadableRelationsMixin(object):
         if remaining_lookup:
             return self.filter_related_objects(related_objects=related_objects_set, lookup=remaining_lookup)
         return set(related_objects_set) - {"", None}
+
+    def _resolve_non_relational_id_values(self, sideloadable_page, relations_to_sideload):
+        for relation in relations_to_sideload:
+            field = self.sideloadable_fields[relation]
+            relation_key = field.child.source or relation
+            values = sideloadable_page.get(relation_key)
+            if not values:
+                continue
+
+            instances = set()
+            pks = set()
+            for value in values:
+                if isinstance(value, models.Model):
+                    instances.add(value)
+                elif value not in ("", None):
+                    pks.add(value)
+            if not pks:
+                continue
+
+            instances.update(self._load_sideloaded_by_pks(field.child.Meta.model, pks, relation))
+            sideloadable_page[relation_key] = instances
+        return sideloadable_page
+
+    def _load_sideloaded_by_pks(self, model, pks, relation):
+        pks = {pk for pk in pks if pk not in ("", None)}
+        if not pks:
+            return set()
+        queryset = model.objects.filter(pk__in=pks)
+        nested = self._nested_prefetches_for_relation(relation)
+        if nested:
+            queryset = queryset.prefetch_related(*nested)
+        return set(queryset)
+
+    def _ids_from_queryset_lookup(self, queryset, lookup):
+        values = queryset.values_list(lookup, flat=True)
+        if not self._is_non_relational_id_lookup(lookup):
+            return set(values) - {None}
+        pks = set()
+        for value in values:
+            if value in ("", None):
+                continue
+            if isinstance(value, (list, tuple, set)):
+                pks.update(item for item in value if item not in ("", None))
+            else:
+                pks.add(value)
+        return pks
+
+    def _relation_uses_non_relational_id_source(self, relation, source_keys):
+        sources = self.sideloadable_field_sources.get(relation)
+        if isinstance(sources, dict):
+            keys = source_keys if source_keys is not None else sources.keys()
+            return any(self._is_non_relational_id_lookup(sources[key]) for key in keys if key in sources)
+        if isinstance(sources, str):
+            return self._is_non_relational_id_lookup(sources)
+        return False
+
+    def _nested_prefetches_for_relation(self, relation):
+        nested = []
+        for lookup in self._flatten_prefetch_lookups(self.user_defined_prefetches.get(relation)):
+            if isinstance(lookup, str) and "__" in lookup:
+                nested.append(lookup.split("__", 1)[1])
+        return list(dict.fromkeys(nested))
+
+    def _flatten_prefetch_lookups(self, declared):
+        if isinstance(declared, dict):
+            lookups = []
+            for value in declared.values():
+                lookups.extend(value if isinstance(value, (list, tuple)) else [value])
+            return lookups
+        if isinstance(declared, (list, tuple)):
+            return list(declared)
+        if declared:
+            return [declared]
+        return []
+
+    def _is_non_relational_id_lookup(self, lookup):
+        if not isinstance(lookup, str):
+            return False
+        model = self.primary_model
+        try:
+            for part in lookup.split("__"):
+                field = model._meta.get_field(part)
+                if not field.is_relation:
+                    return True
+                model = field.related_model
+        except (FieldDoesNotExist, AttributeError):
+            return False
+        return False
 
     # internal_methods:
 
@@ -666,6 +765,8 @@ class SideloadableRelationsMixin(object):
             raise ValueError(f"Adding prefetch of type '{type(prefetch)}' has not been implemented")
         if isinstance(prefetch, str) and len(prefetch) == 1:
             raise ValueError("single letter prefetches are not allowed")
+        if isinstance(prefetch, str) and self._is_non_relational_id_lookup(prefetch):
+            return prefetch
 
         prefetch = self._add_sideloading_filter(prefetch=prefetch, request=request)
 

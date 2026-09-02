@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.4.0 (2026-09-02)
+
+- Sideload non-relational ID columns (`IntegerField`, `UUIDField`, `CharField`, JSON/array lists of ids, …)
+  the same way Django relations are sideloaded
+- Nested lookups after an id column (`legacy_supplier_id__metadata`) are prefetched on the bulk id query
+- Clarify invalid multi-source sideload error messages
+
 ## 2.3.0 (2026-09-01)
 
 - Migrate packaging and development tooling to [uv](https://docs.astral.sh/uv/)
