@@ -2,7 +2,7 @@ import copy
 import importlib.util
 import re
 from itertools import chain
-from typing import Any, Dict, List, Optional, Set, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from django.core.exceptions import FieldDoesNotExist
 from django.core.exceptions import ValidationError as DjangoValidationError
@@ -70,7 +70,7 @@ class SideloadableRelationsMixin(object):
         super().__init__(**kwargs)
         self.check_sideloading_serializer_class(self.sideloading_serializer_class)
 
-    def initialize_serializer(self, request):
+    def initialize_serializer(self, request) -> None:
         sideloading_serializer_class = self.get_sideloading_serializer_class(request=request)
         self.check_sideloading_serializer_class(sideloading_serializer_class)
 
@@ -198,7 +198,7 @@ class SideloadableRelationsMixin(object):
 
         return relations_to_sideload
 
-    def check_sideloading_serializer_class(self, sideloading_serializer_class):
+    def check_sideloading_serializer_class(self, sideloading_serializer_class) -> None:
         if not sideloading_serializer_class:
             raise ValueError(f"'{self.__class__.__name__}' sideloading_serializer_class not found")
         if not issubclass(sideloading_serializer_class, SideLoadableSerializer):
@@ -207,7 +207,7 @@ class SideloadableRelationsMixin(object):
             )
         sideloading_serializer_class.check_setup()
 
-    def get_sideloading_serializer(self, *args, **kwargs):
+    def get_sideloading_serializer(self, *args, **kwargs) -> SideLoadableSerializer:
         """
         Return the sideloading_serializer instance that should be used for serializing output.
         """
@@ -215,7 +215,7 @@ class SideloadableRelationsMixin(object):
         kwargs["context"] = self.get_sideloading_serializer_context()
         return sideloading_serializer_class(*args, **kwargs)
 
-    def get_sideloading_serializer_class(self, request=None):
+    def get_sideloading_serializer_class(self, request=None) -> type:
         """
         Return the class to use for the sideloading_serializer.
         Defaults to using `self.sideloading_serializer_class`.
@@ -232,13 +232,13 @@ class SideloadableRelationsMixin(object):
 
         return self.sideloading_serializer_class
 
-    def get_sideloading_serializer_context(self):
+    def get_sideloading_serializer_context(self) -> Dict:
         """
         Extra context provided to the serializer class.
         """
         return {"request": self.request, "format": self.format_kwarg, "view": self}
 
-    def get_sideloadable_queryset(self, prefetch):
+    def get_sideloadable_queryset(self, prefetch: Union[str, Prefetch]) -> QuerySet:
         if isinstance(prefetch, str):
             model = self.primary_model
             for x in prefetch.split("__"):
@@ -264,7 +264,7 @@ class SideloadableRelationsMixin(object):
         else:
             raise NotImplementedError(f"finding queryset for prefetch type {type(prefetch)} has not been implemented")
 
-    def add_sideloading_prefetches(self, queryset, request, relations_to_sideload):
+    def add_sideloading_prefetches(self, queryset: QuerySet, request, relations_to_sideload: Dict) -> QuerySet:
         # Iterate over the prefetches of the original queryset and modify them
         view_prefetches = {}
         for prefetch in queryset._prefetch_related_lookups:
@@ -288,7 +288,7 @@ class SideloadableRelationsMixin(object):
 
     # modified DRF methods
 
-    def retrieve(self, request, *args, **kwargs):
+    def retrieve(self, request, *args, **kwargs) -> Response:
         if not isinstance(self, RetrieveModelMixin):
             # The viewset does not have RetrieveModelMixin and therefore the method is not allowed
             return self.http_method_not_allowed(request, *args, **kwargs)
@@ -320,7 +320,7 @@ class SideloadableRelationsMixin(object):
         )
         return Response(serializer.data)
 
-    def list(self, request, *args, **kwargs):
+    def list(self, request, *args, **kwargs) -> Response:
         if not isinstance(self, ListModelMixin):
             # The viewset does not have ListModelMixin and therefore the method is not allowed
             return self.http_method_not_allowed(request, *args, **kwargs)
@@ -477,7 +477,7 @@ class SideloadableRelationsMixin(object):
 
         return self._resolve_non_relational_id_values(sideloadable_page, relations_to_sideload)
 
-    def get_sideloadable_object_as_queryset(self, request, relations_to_sideload):
+    def get_sideloadable_object_as_queryset(self, request, relations_to_sideload: Dict) -> QuerySet:
         """
         mimics DRF original method get_object()
         Returns the object the view is displaying with sideloaded models prefetched.
@@ -632,7 +632,7 @@ class SideloadableRelationsMixin(object):
 
     # internal_methods:
 
-    def _clean_prefetches(self, field, relation, value, ensure_list=False):
+    def _clean_prefetches(self, field, relation: str, value, ensure_list: bool = False):
         if not value:
             raise ValueError(f"Sideloadable field '{relation}' prefetch or source must be set!")
         elif isinstance(value, str):
@@ -716,7 +716,7 @@ class SideloadableRelationsMixin(object):
 
         return cleaned_prefetches
 
-    def add_sideloading_prefetch_filter(self, source, queryset, request):
+    def add_sideloading_prefetch_filter(self, source: str, queryset: QuerySet, request) -> Tuple[QuerySet, bool]:
         """
         This method is intended to e overwritten in case the user wants to implement
         their own filters based on the related model or the relationship to the base model
