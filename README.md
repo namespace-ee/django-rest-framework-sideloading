@@ -128,6 +128,31 @@ DRF-sideloading is an extension to provide side-loading functionality of related
    }
    ```
 
+   Non-relational ID columns (an `IntegerField`, `UUIDField`, `CharField`, `JSONField`/`ArrayField` of ids, and so on)
+   can be used as sources the same way relations can. They are not passed to `prefetch_related`; the stored ids are
+   collected and loaded with one `filter(pk__in=...)` per sideload field. The related model comes from the sideload
+   serializer, not from a Django relation.
+
+   Nested lookups after the id column are applied to that query. `legacy_supplier_id__metadata` prefetches `metadata`
+   on the supplier rows loaded from `legacy_supplier_id`.
+
+   ```python
+   class ProductSideloadableSerializer(SideLoadableSerializer):
+       products = ProductSerializer(many=True)
+       suppliers = SupplierSerializer(many=True)
+       extra_partners = PartnerSerializer(many=True, source="partner_ids")
+
+       class Meta:
+           primary = "products"
+           prefetches = {
+               "suppliers": {
+                   "supplier": ["supplier", "supplier__metadata"],
+                   "legacy": ["legacy_supplier_id", "legacy_supplier_id__metadata"],
+               },
+               "extra_partners": ["partner_ids"],
+           }
+   ```
+
 5. Configure sideloading in ViewSet:
    
    Include **SideloadableRelationsMixin** mixin in ViewSet and define **sideloading_serializer_class** as shown in example below. 
