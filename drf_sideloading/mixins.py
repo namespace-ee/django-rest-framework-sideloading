@@ -55,7 +55,7 @@ def contains_where_node(existing_node: WhereNode, new_node: WhereNode) -> bool:
 class SideloadableRelationsMixin(object):
     sideloading_query_param_name = "sideload"
     sideloading_serializer_class = None
-    primary_field_name: str = None
+    primary_field_name: Optional[str] = None
     sideloadable_fields: Dict = {}
     user_defined_prefetches: Dict = {}
     primary_field = None
@@ -84,7 +84,7 @@ class SideloadableRelationsMixin(object):
         self.user_defined_prefetches = getattr(sideloading_serializer_class.Meta, "prefetches", {})
         self.sideloadable_field_sources = self.get_sideloading_field_sources()
 
-    def get_source_from_prefetch(self, prefetches: Union[str, List, Dict]):
+    def get_source_from_prefetch(self, prefetches: Union[str, List, Dict, Prefetch]) -> Union[str, Dict]:
         if isinstance(prefetches, str):
             return prefetches
         if isinstance(prefetches, Prefetch):
@@ -819,7 +819,9 @@ class SideloadableRelationsMixin(object):
 
         return prefetch_attr
 
-    def _get_relevant_prefetches(self, relations_to_sideload: Dict, request, gathered_prefetches: Dict = None) -> Dict:
+    def _get_relevant_prefetches(
+        self, relations_to_sideload: Dict, request, gathered_prefetches: Optional[Dict] = None
+    ) -> Dict:
         """
         Collects all relevant prefetches and returns
         compressed prefetches and sources per relation to be used later.
