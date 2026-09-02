@@ -183,7 +183,12 @@ class SideloadableRelationsMixin(object):
                     # Check if all requested sources are defined
                     invalid_sources = set(relations) - set(source_relations)
                     if invalid_sources:
-                        msg = _(f"'{fieldname}' sources {', '.join(invalid_sources)} are not defined.")
+                        if len(invalid_sources) == 1:
+                            msg = _(f"source {next(iter(invalid_sources))} is not defined for '{fieldname}'")
+                        else:
+                            msg = _(
+                                f"sources {', '.join(sorted(invalid_sources))} are not defined for '{fieldname}'"
+                            )
                         raise ValidationError({self.sideloading_query_param_name: [msg]})
             elif relations:
                 msg = _(f"'{fieldname}' is not a multi source field.")
