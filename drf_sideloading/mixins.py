@@ -2,12 +2,12 @@ import copy
 import importlib.util
 import re
 from itertools import chain
-from typing import Dict, List, Optional, Set, Union
+from typing import Any, Dict, List, Optional, Set, Union
 
 from django.core.exceptions import FieldDoesNotExist
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import models
-from django.db.models import Prefetch
+from django.db.models import Prefetch, QuerySet
 from django.db.models.fields.related_descriptors import (
     ForwardManyToOneDescriptor,
     ForwardOneToOneDescriptor,
@@ -538,7 +538,9 @@ class SideloadableRelationsMixin(object):
             return self.filter_related_objects(related_objects=related_objects_set, lookup=remaining_lookup)
         return set(related_objects_set) - {"", None}
 
-    def _resolve_non_relational_id_values(self, sideloadable_page, relations_to_sideload):
+    def _resolve_non_relational_id_values(
+        self, sideloadable_page: Dict[str, Any], relations_to_sideload: Dict
+    ) -> Dict[str, Any]:
         for relation in relations_to_sideload:
             field = self.sideloadable_fields[relation]
             relation_key = field.child.source or relation
@@ -546,8 +548,8 @@ class SideloadableRelationsMixin(object):
             if not values:
                 continue
 
-            instances = set()
-            pks = set()
+            instances: Set[models.Model] = set()
+            pks: Set[Any] = set()
             for value in values:
                 if isinstance(value, models.Model):
                     instances.add(value)
@@ -560,7 +562,7 @@ class SideloadableRelationsMixin(object):
             sideloadable_page[relation_key] = instances
         return sideloadable_page
 
-    def _load_sideloaded_by_pks(self, model, pks, relation):
+    def _load_sideloaded_by_pks(self, model: type[models.Model], pks: Set[Any], relation: str) -> Set[models.Model]:
         pks = {pk for pk in pks if pk not in ("", None)}
         if not pks:
             return set()
@@ -570,11 +572,11 @@ class SideloadableRelationsMixin(object):
             queryset = queryset.prefetch_related(*nested)
         return set(queryset)
 
-    def _ids_from_queryset_lookup(self, queryset, lookup):
+    def _ids_from_queryset_lookup(self, queryset: QuerySet, lookup: str) -> Set[Any]:
         values = queryset.values_list(lookup, flat=True)
         if not self._is_non_relational_id_lookup(lookup):
             return set(values) - {None}
-        pks = set()
+        pks: Set[Any] = set()
         for value in values:
             if value in ("", None):
                 continue
@@ -584,7 +586,7 @@ class SideloadableRelationsMixin(object):
                 pks.add(value)
         return pks
 
-    def _relation_uses_non_relational_id_source(self, relation, source_keys):
+    def _relation_uses_non_relational_id_source(self, relation: str, source_keys: Optional[Union[Set, List]]) -> bool:
         sources = self.sideloadable_field_sources.get(relation)
         if isinstance(sources, dict):
             keys = source_keys if source_keys is not None else sources.keys()
@@ -593,16 +595,18 @@ class SideloadableRelationsMixin(object):
             return self._is_non_relational_id_lookup(sources)
         return False
 
-    def _nested_prefetches_for_relation(self, relation):
+    def _nested_prefetches_for_relation(self, relation: str) -> List[str]:
         nested = []
         for lookup in self._flatten_prefetch_lookups(self.user_defined_prefetches.get(relation)):
             if isinstance(lookup, str) and "__" in lookup:
                 nested.append(lookup.split("__", 1)[1])
         return list(dict.fromkeys(nested))
 
-    def _flatten_prefetch_lookups(self, declared):
+    def _flatten_prefetch_lookups(
+        self, declared: Optional[Union[str, List, Dict, Prefetch]]
+    ) -> List[Union[str, Prefetch]]:
         if isinstance(declared, dict):
-            lookups = []
+            lookups: List[Union[str, Prefetch]] = []
             for value in declared.values():
                 lookups.extend(value if isinstance(value, (list, tuple)) else [value])
             return lookups
@@ -612,7 +616,7 @@ class SideloadableRelationsMixin(object):
             return [declared]
         return []
 
-    def _is_non_relational_id_lookup(self, lookup):
+    def _is_non_relational_id_lookup(self, lookup: Any) -> bool:
         if not isinstance(lookup, str):
             return False
         model = self.primary_model
