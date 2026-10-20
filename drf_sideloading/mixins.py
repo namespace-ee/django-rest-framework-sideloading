@@ -411,12 +411,12 @@ class SideloadableRelationsMixin(object):
                                 "ManyRelatedManager",
                                 "RelatedManager",
                             ]:
-                                related_ids |= set(prefetched_data.values_list("id", flat=True))
+                                related_ids |= set(prefetched_data.values_list("pk", flat=True))
                             elif isinstance(prefetched_data, models.Model):
-                                related_ids.add(prefetched_data.id)
+                                related_ids.add(prefetched_data.pk)
                             elif isinstance(prefetched_data, list):
                                 try:
-                                    related_ids |= set(x.id for x in prefetched_data)
+                                    related_ids |= set(x.pk for x in prefetched_data)
                                 except AttributeError:
                                     related_ids |= set(prefetched_data)
                             elif prefetched_data:
@@ -427,7 +427,7 @@ class SideloadableRelationsMixin(object):
                 else:
                     raise ValueError(f"No prefetch for {prefetch_key} found!")
 
-            sideloadable_page[relation_key] = source_model.objects.filter(id__in=related_ids)
+            sideloadable_page[relation_key] = source_model.objects.filter(pk__in=related_ids)
 
         return sideloadable_page
 

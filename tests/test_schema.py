@@ -44,6 +44,7 @@ def test_sideload_parameter_is_documented():
         "main_suppliers",
         "metadata",
         "partners",
+        "specs",
     }
     examples = {v["summary"]: v["value"] for v in sideload["examples"].values()}
     assert examples["Regular sideloading"] == "categories,main_suppliers"
