@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.3.1
+
+- fix detail-view (and unpaginated list) sideloading crashing when a sideloaded relation's model has no `id` column - for example when its primary key is a `OneToOneField`. Related rows are collected and re-queried by `pk` instead of `id`.
+
 ## 2.3.0 (2026-09-01)
 
 - Migrate packaging and development tooling to [uv](https://docs.astral.sh/uv/)

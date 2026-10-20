@@ -7,12 +7,21 @@ from rest_framework.renderers import BrowsableAPIRenderer, JSONRenderer
 from rest_framework.settings import api_settings
 
 from drf_sideloading.serializers import SideLoadableSerializer
-from tests.models import Category, Partner, Product, ProductMetadata, Supplier, SupplierMetadata
+from tests.models import (
+    Category,
+    Partner,
+    Product,
+    ProductMetadata,
+    ProductSpecs,
+    Supplier,
+    SupplierMetadata,
+)
 from tests.serializers import (
     CategorySerializer,
     PartnerSerializer,
     ProductMetadataSerializer,
     ProductSerializer,
+    ProductSpecsSerializer,
     SupplierSerializer,
 )
 from tests.viewsets import ProductViewSet
@@ -55,6 +64,7 @@ class BaseTestCase(TestCase):
 
         self.product1 = Product.objects.create(name="Product1", category=self.category, supplier=self.supplier1)
         self.product1_metadata = ProductMetadata.objects.create(product=self.product1, properties="value 1")
+        self.product1_specs = ProductSpecs.objects.create(product=self.product1, color="red")
         self.product1.partners.add(self.partner1)
         self.product1.partners.add(self.partner2)
         self.product1.partners.add(self.partner4)
@@ -89,6 +99,7 @@ class ProductSideloadTestCase(BaseTestCase):
             partners = PartnerSerializer(many=True)
             partners = PartnerSerializer(many=True)
             metadata = ProductMetadataSerializer(many=True)
+            specs = ProductSpecsSerializer(many=True)
 
             class Meta:
                 primary = "products"
@@ -97,6 +108,7 @@ class ProductSideloadTestCase(BaseTestCase):
                     "suppliers": ["supplier", "supplier__metadata"],
                     "partners": "partners",
                     "metadata": "metadata",
+                    "specs": "specs",
                 }
 
         ProductViewSet.sideloading_serializer_class = TempProductSideloadableSerializer
@@ -144,6 +156,18 @@ class ProductSideloadTestCase(BaseTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.json())
         self.assertIsInstance(response.json(), dict)
         self.assertListEqual(["products", "suppliers"], list(response.json().keys()))
+
+    def test_list_sideloading_with_non_id_primary_key_relation(self):
+        """Sideloaded models whose primary key is not an "id" column must sideload on unpaginated lists too"""
+        response = self.client.get(
+            path=reverse("product-list"),
+            data={"sideload": "specs"},
+            **self.DEFAULT_HEADERS,
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.json())
+        self.assertIsInstance(response.json(), dict)
+        self.assertListEqual(["products", "specs"], list(response.json().keys()))
+        self.assertListEqual([{"product": self.product1.id, "color": "red"}], response.json()["specs"])
 
     def test_list_partial_sideloading(self):
         """Test sideloading for selected relations"""
@@ -199,6 +223,18 @@ class ProductSideloadTestCase(BaseTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.json())
         self.assertIsInstance(response.json(), dict)
         self.assertListEqual(["products", "suppliers"], list(response.json().keys()))
+
+    def test_detail_sideloading_with_non_id_primary_key_relation(self):
+        """Sideloaded models whose primary key is not an "id" column must sideload on detail views"""
+        response = self.client.get(
+            path=reverse("product-detail", args=[self.product1.id]),
+            data={"sideload": "specs"},
+            **self.DEFAULT_HEADERS,
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.json())
+        self.assertIsInstance(response.json(), dict)
+        self.assertListEqual(["products", "specs"], list(response.json().keys()))
+        self.assertListEqual([{"product": self.product1.id, "color": "red"}], response.json()["specs"])
 
     def test_detail_partial_sideloading(self):
         """Test sideloading for selected relations in detail view"""

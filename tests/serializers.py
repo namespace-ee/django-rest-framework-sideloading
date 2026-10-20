@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from drf_sideloading.serializers import SideLoadableSerializer
-from tests.models import Category, Partner, Product, ProductMetadata, Supplier, SupplierMetadata
+from tests.models import Category, Partner, Product, ProductMetadata, ProductSpecs, Supplier, SupplierMetadata
 
 
 class SupplierMetadataSerializer(serializers.ModelSerializer):
@@ -36,6 +36,12 @@ class ProductMetadataSerializer(serializers.ModelSerializer):
         fields = ["product", "properties"]
 
 
+class ProductSpecsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductSpecs
+        fields = ["product", "color"]
+
+
 class ProductSerializer(serializers.ModelSerializer):
     metadata = ProductMetadataSerializer(read_only=True)
 
@@ -67,6 +73,7 @@ class ProductSideloadableSerializer(SideLoadableSerializer):
     partners = PartnerSerializer(source="partner", many=True)
     combined_suppliers = SupplierSerializer(many=True)
     metadata = ProductMetadataSerializer(many=True, read_only=True)
+    specs = ProductSpecsSerializer(many=True, read_only=True)
 
     class Meta:
         primary = "products"
@@ -82,6 +89,7 @@ class ProductSideloadableSerializer(SideLoadableSerializer):
                 "backup_supplier": ["backup_supplier", "backup_supplier__metadata"],
             },
             "metadata": "metadata",
+            "specs": "specs",
         }
 
 

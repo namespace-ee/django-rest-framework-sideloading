@@ -31,3 +31,9 @@ class Product(models.Model):
 class ProductMetadata(models.Model):
     product = models.OneToOneField(Product, related_name="metadata", on_delete=models.CASCADE)
     properties = models.CharField(max_length=255)
+
+
+class ProductSpecs(models.Model):
+    # primary key is the product relation, not an "id" column
+    product = models.OneToOneField(Product, related_name="specs", on_delete=models.CASCADE, primary_key=True)
+    color = models.CharField(max_length=255)
